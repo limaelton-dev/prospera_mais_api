@@ -1,6 +1,6 @@
 import { SpaceId } from "../../domain/space/space-id.js";
 import { Space, SpaceStatus, SpaceType } from "../../domain/space/space.js";
-import { SpaceOrmEntity } from "../typeorm/space.orm-entity.js";
+import { SpaceOrmEntity } from "../typeorm/entities/space.orm-entity.js";
 import { PersonId } from "../../domain/person/person-id.js";
 
 export class SpaceMapper {

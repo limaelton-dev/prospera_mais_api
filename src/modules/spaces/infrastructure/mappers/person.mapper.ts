@@ -1,6 +1,6 @@
 import { PersonId } from "../../domain/person/person-id.js";
 import { Person } from "../../domain/person/person.js";
-import { PersonOrmEntity } from "../typeorm/person.orm-entity.js";
+import { PersonOrmEntity } from "../typeorm/entities/person.orm-entity.js";
 
 export class PersonMapper {
     static toDomain(entity: PersonOrmEntity): Person {

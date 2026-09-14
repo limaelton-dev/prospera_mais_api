@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { SpaceRepository } from "../../../application/ports/private/space.repository.js";
 import { EntityManagerProvider } from "../../../../../shared/technical/database/typeorm/entity-manager.provider.js";
 import { Space } from "../../../domain/space/space.js";
-import { SpaceOrmEntity } from "../space.orm-entity.js";
+import { SpaceOrmEntity } from "../entities/space.orm-entity.js";
 import { SpaceMapper } from "../../mappers/space.mapper.js";
 import { PersonId } from "../../../domain/person/person-id.js";
 
