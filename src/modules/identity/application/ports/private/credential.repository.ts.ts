@@ -1,5 +1,5 @@
 import type { PersonId } from '../../../../spaces/domain/person/person-id.js';
-import { AuthCredential } from '../../models/auth-creadential.js';
+import type { AuthCredential } from '../../models/auth-credential.js';
 
 export const CREDENTIAL_REPOSITORY = Symbol(
   'CREDENTIAL_REPOSITORY',
