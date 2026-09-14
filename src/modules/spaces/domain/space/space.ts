@@ -1,4 +1,4 @@
-import { PersonId } from "./person/person-id.js"
+import { PersonId } from "../person/person-id.js"
 import { SpaceId } from "./space-id.js"
 
 export enum SpaceType {
