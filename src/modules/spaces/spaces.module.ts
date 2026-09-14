@@ -7,6 +7,8 @@ import { TypeOrmPersonRepository } from "./infrastructure/typeorm/repositories/t
 import { TypeOrmSpaceRepository } from "./infrastructure/typeorm/repositories/typeorm-space.repository.js";
 import { PERSON_REPOSITORY } from "./application/ports/person.repository.js";
 import { SPACE_REPOSITORY } from "./application/ports/space.repository.js";
+import { PROVISION_PERSONAL_CONTEXT } from "./application/ports/provision-personal-context.js";
+import { ProvisionPersonalContextService } from "./application/services/provision-personal-context.service.js";
 
 @Module({
     imports: [
@@ -20,6 +22,7 @@ import { SPACE_REPOSITORY } from "./application/ports/space.repository.js";
     providers: [
         TypeOrmPersonRepository,
         TypeOrmSpaceRepository,
+        ProvisionPersonalContextService,
 
         {
             provide: PERSON_REPOSITORY,
@@ -29,6 +32,14 @@ import { SPACE_REPOSITORY } from "./application/ports/space.repository.js";
             provide: SPACE_REPOSITORY,
             useExisting: TypeOrmSpaceRepository
         },
+        {
+            provide: PROVISION_PERSONAL_CONTEXT,
+            useExisting: ProvisionPersonalContextService
+        }
     ],
+
+    exports: [
+        PROVISION_PERSONAL_CONTEXT,
+    ]
 })
-export class SpaceModule {}
+export class SpacesModule {}

@@ -10,15 +10,18 @@ type PersonProps = {
 export class Person {
     private constructor(private readonly props:PersonProps) {}
 
-    static create(displayName: string): Person {
+    static create(id: PersonId, displayName: string): Person {
         const normalizedDisplayName = displayName.trim();
 
-        if(!normalizedDisplayName) {
-            throw new Error('Display namer cannot be empty');
+        if(
+            normalizedDisplayName.length < 2 ||
+            normalizedDisplayName.length > 80 
+        ) {
+            throw new Error('Display name must contain between 2 and 80 characters');
         }
 
         return new Person({
-            id: PersonId.create(),
+            id,
             displayName: normalizedDisplayName,
             version: 1,
             createdAt: new Date(),

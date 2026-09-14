@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './shared/technical/database/database.module.js';
 import { envSchema } from './config/env.schema.js';
-import { SpaceModule } from './modules/spaces/space.module.js';
+import { SpacesModule } from './modules/spaces/spaces.module.js';
 
 @Module({
   imports: [
@@ -12,7 +12,7 @@ import { SpaceModule } from './modules/spaces/space.module.js';
       validationSchema: envSchema,
     }),
     DatabaseModule,
-    SpaceModule,
+    SpacesModule,
   ],
   controllers: [],
   providers: [],

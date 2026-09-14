@@ -23,10 +23,10 @@ type SpaceProps = {
 export class Space {
     private constructor(private readonly props: SpaceProps) {}
 
-    static createPersonal(ownerPersonId: PersonId): Space {
+    static createPersonal(id: SpaceId, ownerPersonId: PersonId): Space {
         const now = new Date();
         return new Space({
-            id: SpaceId.create(),
+            id,
             type: SpaceType.PERSONAL,
             status: SpaceStatus.ACTIVE,
             personalOwnerPersonId: ownerPersonId,
