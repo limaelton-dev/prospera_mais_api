@@ -38,7 +38,7 @@ export class Person {
     }
 
     get version(): number {
-        return this.version
+        return this.props.version;
     }
 
     get createdAt(): Date {

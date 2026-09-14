@@ -41,24 +41,24 @@ export class Space {
     }
 
     get id(): SpaceId {
-        return this.id;
+        return this.props.id;
     }
     get type(): SpaceType {
-        return this.type;
+        return this.props.type;
     }
     get status(): SpaceStatus {
-        return this.status;
+        return this.props.status;
     }
     get personalOwnerPersonId(): PersonId {
-        return this.personalOwnerPersonId
+        return this.props.personalOwnerPersonId
     }
     get version(): number {
-        return this.version
+        return this.props.version
     }
     get createdAt(): Date {
-        return this.createdAt
+        return this.props.createdAt
     }
     get updatedAt(): Date {
-        return this.updatedAt
+        return this.props.updatedAt
     }
 }
