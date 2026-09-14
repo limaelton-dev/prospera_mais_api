@@ -1,5 +1,5 @@
-import { PersonId } from "../../domain/person/person-id.js";
-import { Space } from "../../domain/space/space.js";
+import { PersonId } from "../../../domain/person/person-id.js";
+import { Space } from "../../../domain/space/space.js";
 
 
 export const SPACE_REPOSITORY = Symbol('SPACE_REPOSITORY');

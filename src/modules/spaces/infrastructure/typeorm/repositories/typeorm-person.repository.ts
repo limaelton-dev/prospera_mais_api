@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { PersonRepository } from "../../../application/ports/person.repository.js";
+import { PersonRepository } from "../../../application/ports/private/person.repository.js";
 import { EntityManagerProvider } from "../../../../../shared/technical/database/typeorm/entity-manager.provider.js";
 import { PersonOrmEntity } from "../person.orm-entity.js";
 import { PersonMapper } from "../../mappers/person.mapper.js";

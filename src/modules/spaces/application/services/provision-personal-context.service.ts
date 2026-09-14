@@ -1,9 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { PersonalContext, ProvisionPersonalContext, ProvisionPersonalContextInput } from "../ports/provision-personal-context.js";
-import { PERSON_REPOSITORY, type PersonRepository } from "../ports/person.repository.js";
-import { SPACE_REPOSITORY, type SpaceRepository } from "../ports/space.repository.js";
+import type { ProvisionPersonalContext, ProvisionPersonalContextInput } from "../ports/public/provision-personal-context.js";
+import { PERSON_REPOSITORY, type PersonRepository } from "../ports/private/person.repository.js";
+import { SPACE_REPOSITORY, type SpaceRepository } from "../ports/private/space.repository.js";
 import { Person } from "../../domain/person/person.js";
 import { Space } from "../../domain/space/space.js";
+import type { PersonalContext } from "../models/personal-context.js";
 
 @Injectable()
 export class ProvisionPersonalContextService implements ProvisionPersonalContext {

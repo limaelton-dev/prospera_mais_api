@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { SpaceRepository } from "../../../application/ports/space.repository.js";
+import { SpaceRepository } from "../../../application/ports/private/space.repository.js";
 import { EntityManagerProvider } from "../../../../../shared/technical/database/typeorm/entity-manager.provider.js";
 import { Space } from "../../../domain/space/space.js";
 import { SpaceOrmEntity } from "../space.orm-entity.js";
