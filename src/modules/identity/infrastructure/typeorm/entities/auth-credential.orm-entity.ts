@@ -17,7 +17,7 @@ export class AuthCredentialOrmEntity {
     })
     personId!: string;
 
-    @Column({ type: 'varchar', length: 254, unique: true })
+    @Column({ type: 'varchar', length: 254 })
     email!: string;
 
     @Column({
@@ -29,6 +29,6 @@ export class AuthCredentialOrmEntity {
     @Column({ name: 'created_at', type: 'timestamptz'})
     createdAt!: Date;
 
-    @Column({ name: 'updatetedAt_at', type: 'timestamptz'})
-    updatetedAt!: Date;
+    @Column({ name: 'updated_at', type: 'timestamptz'})
+    updatedAt!: Date;
 }
