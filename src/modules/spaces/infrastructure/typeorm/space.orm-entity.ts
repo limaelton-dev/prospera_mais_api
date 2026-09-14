@@ -42,7 +42,7 @@ export class SpaceOrmEntity {
     version!: number;
     
     @Column({ name: 'created_at', type: 'timestamptz'})
-    createdAt: Date;
+    createdAt!: Date;
 
     @Column({ name: 'updated_at', type: 'timestamptz' })
     updatedAt!: Date;
