@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { SessionRepository } from "../../../application/ports/private/session.repository.js";
 import { EntityManagerProvider } from "../../../../../shared/technical/database/typeorm/entity-manager.provider.js";
-import { AuthSession } from "../../../application/models/auth-session.js";
 import { AuthSessionOrmEntity } from "../entities/auth-session.orm-entity.js";
 import { PersonId } from "../../../../spaces/domain/person/person-id.js";
+import type { SessionRepository } from "../../../application/ports/private/session.repository.js";
+import type { AuthSession } from "../../../application/models/auth-session.js";
 
 @Injectable()
 export class TypeOrmSessionRepository implements SessionRepository{

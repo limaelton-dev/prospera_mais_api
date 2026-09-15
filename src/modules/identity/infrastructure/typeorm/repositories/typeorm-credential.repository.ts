@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { CredentialRepository } from "../../../application/ports/private/credential.repository.js";
 import { EntityManagerProvider } from "../../../../../shared/technical/database/typeorm/entity-manager.provider.js";
-import { AuthCredential } from "../../../application/models/auth-credential.js";
 import { PersonId } from "../../../../spaces/domain/person/person-id.js";
 import { AuthCredentialOrmEntity } from "../entities/auth-credential.orm-entity.js";
+import type { CredentialRepository } from "../../../application/ports/private/credential.repository.js";
+import type { AuthCredential } from "../../../application/models/auth-credential.js";
 
 @Injectable()
 export class TypeOrmCredentialRepository implements CredentialRepository {
