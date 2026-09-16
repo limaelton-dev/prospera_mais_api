@@ -1,4 +1,4 @@
-import { Check, Column, Entity, Index, PrimaryColumn } from "typeorm";
+import { Check, Column, Entity, ForeignKey, Index, PrimaryColumn } from "typeorm";
 
 @Entity({ name: 'spaces' })
 @Check(
@@ -25,17 +25,21 @@ export class SpaceOrmEntity {
     @PrimaryColumn({type: 'uuid'})
     id!: string
 
-    @Column({ type: 'varchar', length: 30 })
+    @Column({ type: 'varchar', length: 16 })
     type!: string;
 
-    @Column({ type: 'varchar', length: 30})
+    @Column({ type: 'varchar', length: 16})
     status!: string;
 
     @Column({
         name: 'personal_owner_person_id',
         type: 'uuid',
         nullable: true,
-      })
+    })
+    @ForeignKey('persons', 'id', {
+      name: 'FK_spaces_personal_owner',
+      onDelete: 'RESTRICT'
+    })
     personalOwnerPersonId!: string | null;
     
     @Column({ type: 'integer', default: 1})

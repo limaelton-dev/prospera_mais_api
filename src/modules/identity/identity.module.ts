@@ -7,6 +7,10 @@ import { TypeOrmCredentialRepository } from "./infrastructure/typeorm/repositori
 import { TypeOrmSessionRepository } from "./infrastructure/typeorm/repositories/typeorm-session.repository.js";
 import { CREDENTIAL_REPOSITORY } from "./application/ports/private/credential.repository.js";
 import { SESSION_REPOSITORY } from "./application/ports/private/session.repository.js";
+import { Argon2PasswordHasher } from "./infrastructure/security/argon2-password-hasher.js";
+import { CryptSessionTokenGenerator } from "./infrastructure/security/crypto-session-token-generator.js";
+import { PASSWORD_HASHER } from "./application/ports/private/password-hasher.js";
+import { SESSION_TOKEN_GENERATOR } from "./application/ports/private/session-token-generator.js";
 
 @Module({
     imports: [
@@ -20,6 +24,9 @@ import { SESSION_REPOSITORY } from "./application/ports/private/session.reposito
     providers: [
         TypeOrmCredentialRepository,
         TypeOrmSessionRepository,
+        
+        Argon2PasswordHasher,
+        CryptSessionTokenGenerator,
 
         {
             provide: CREDENTIAL_REPOSITORY,
@@ -28,6 +35,14 @@ import { SESSION_REPOSITORY } from "./application/ports/private/session.reposito
         {
             provide: SESSION_REPOSITORY,
             useExisting: TypeOrmSessionRepository
+        },
+        {
+            provide: PASSWORD_HASHER,
+            useExisting: Argon2PasswordHasher
+        },
+        {
+            provide: SESSION_TOKEN_GENERATOR,
+            useExisting: CryptSessionTokenGenerator
         },
     ],
     
