@@ -4,6 +4,8 @@ import { PersonId } from "../../../../spaces/domain/person/person-id.js";
 import { AuthCredentialOrmEntity } from "../entities/auth-credential.orm-entity.js";
 import type { CredentialRepository } from "../../../application/ports/private/credential.repository.js";
 import type { AuthCredential } from "../../../application/models/auth-credential.js";
+import { QueryFailedError } from "typeorm";
+import { EmailAlreadyInUseError } from "../../../application/errors/email-already-in-use.error.js";
 
 @Injectable()
 export class TypeOrmCredentialRepository implements CredentialRepository {
@@ -22,7 +24,25 @@ export class TypeOrmCredentialRepository implements CredentialRepository {
         entity.createdAt = credential.createdAt;
         entity.updatedAt = credential.updatedAt;
 
-        await repository.save(entity);
+        try{
+            await repository.save(entity);
+        } catch(error: unknown) {
+            if(error instanceof QueryFailedError) {
+                const databaseError = error.driverError as {
+                    code?: string,
+                    constraint?: string;
+                }
+
+                if(
+                    databaseError.code === '23505' &&
+                    databaseError.constraint === 'UQ_auth_credentials_email'
+                ) {
+                    throw new EmailAlreadyInUseError();
+                }
+            }
+
+            throw error;
+        }
     }
 
     async findByEmail(email: string): Promise<AuthCredential | null> {
