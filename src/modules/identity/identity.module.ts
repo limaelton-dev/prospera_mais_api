@@ -14,6 +14,7 @@ import { SESSION_TOKEN_GENERATOR } from './application/ports/private/session-tok
 import { SpacesModule } from '../spaces/spaces.module.js';
 import { RegisterAccountHandler } from './application/handlers/register-account.handler.js';
 import { LoginHandler } from './application/handlers/login.handler.js';
+import { SessionService } from './application/services/session.service.js';
 
 @Module({
     imports: [
@@ -34,6 +35,7 @@ import { LoginHandler } from './application/handlers/login.handler.js';
 
         RegisterAccountHandler,
         LoginHandler,
+        SessionService,
 
         {
             provide: CREDENTIAL_REPOSITORY,

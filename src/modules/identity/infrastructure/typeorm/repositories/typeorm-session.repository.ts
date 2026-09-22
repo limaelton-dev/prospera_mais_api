@@ -4,6 +4,7 @@ import { AuthSessionOrmEntity } from '../entities/auth-session.orm-entity.js';
 import { PersonId } from '../../../../spaces/domain/person/person-id.js';
 import type { SessionRepository } from '../../../application/ports/private/session.repository.js';
 import type { AuthSession } from '../../../application/models/auth-session.js';
+import { MoreThan } from 'typeorm';
 
 @Injectable()
 export class TypeOrmSessionRepository implements SessionRepository {
@@ -35,6 +36,7 @@ export class TypeOrmSessionRepository implements SessionRepository {
         const entity = await repository.findOne({
             where: {
                 tokenHash,
+                expiresAt: MoreThan(new Date()),
             },
         });
 
