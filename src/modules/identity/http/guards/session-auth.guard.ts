@@ -1,11 +1,16 @@
-import { CanActivate, ExecutionContext } from "@nestjs/common";
-import { Reflector } from "@nestjs/core";
-import { SessionService } from "../../application/services/session.service.js";
-import { ConfigService } from "@nestjs/config";
-import { Observable } from "rxjs";
-import { IS_PUBLIC_KEY } from "../decorators/public.decorator.js";
-import { AuthenticatedRequest } from "../types/authenticated-request.js";
+import {
+    Injectable,
+    type CanActivate,
+    type ExecutionContext,
+} from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 
+import { SessionService } from '../../application/services/session.service.js';
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
+import type { AuthenticatedRequest } from '../types/authenticated-request.js';
+
+@Injectable()
 export class SessionAuthGuard implements CanActivate {
     constructor(
         private readonly reflector: Reflector,
