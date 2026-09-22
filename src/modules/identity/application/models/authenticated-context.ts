@@ -4,7 +4,7 @@ export type AuthenticatedContext = {
         displayName: string;
         email: string;
     }
-    personSpace: {
+    personalSpace: {
         id: string;
         type: 'PERSONAL';
         label: 'Meu espaço';

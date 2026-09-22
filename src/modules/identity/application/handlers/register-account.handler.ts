@@ -47,11 +47,10 @@ export class RegisterAccountHandler {
         private readonly configService: ConfigService,
     ) {}
 
-    async exectute(
+    async execute(
         input: RegisterAccountInput,
     ): Promise<RegisterAccountResult> {
-        const email = input.email.trim().toLocaleLowerCase();
-
+        const email = input.email.trim().toLowerCase();
         const existingCredential =
             await this.credentialRepository.findByEmail(email);
 
@@ -60,7 +59,7 @@ export class RegisterAccountHandler {
         }
         
         const sessionTtlSeconds = 
-            await this.configService.getOrThrow<number>('SESSION_TTL_SECONDS');
+            this.configService.getOrThrow<number>('SESSION_TTL_SECONDS');
 
         const passwordHash = 
             await this.passwordHasher.hash(input.password);
@@ -107,7 +106,7 @@ export class RegisterAccountHandler {
                             displayName: personalContext.person.displayName,
                             email,
                         },
-                        personSpace: {
+                        personalSpace: {
                             id: personalContext.personalSpace.id.value,
                             type: personalContext.personalSpace.type,
                             label: personalContext.personalSpace.label
