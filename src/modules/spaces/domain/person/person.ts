@@ -1,23 +1,25 @@
-import { PersonId } from "./person-id.js"
+import { PersonId } from './person-id.js';
 
 type PersonProps = {
-    id: PersonId,
-    displayName: string,
-    version: number,
-    createdAt: Date,
+    id: PersonId;
+    displayName: string;
+    version: number;
+    createdAt: Date;
 };
 
 export class Person {
-    private constructor(private readonly props:PersonProps) {}
+    private constructor(private readonly props: PersonProps) {}
 
     static create(id: PersonId, displayName: string): Person {
         const normalizedDisplayName = displayName.trim();
 
-        if(
+        if (
             normalizedDisplayName.length < 2 ||
-            normalizedDisplayName.length > 80 
+            normalizedDisplayName.length > 80
         ) {
-            throw new Error('Display name must contain between 2 and 80 characters');
+            throw new Error(
+                'Display name must contain between 2 and 80 characters',
+            );
         }
 
         return new Person({

@@ -1,6 +1,9 @@
-import { Injectable } from "@nestjs/common";
-import type { GeneratedSessionToken, SessionTokenGenerator } from "../../application/ports/private/session-token-generator.js";
-import { createHash, randomBytes } from "node:crypto";
+import { Injectable } from '@nestjs/common';
+import type {
+    GeneratedSessionToken,
+    SessionTokenGenerator,
+} from '../../application/ports/private/session-token-generator.js';
+import { createHash, randomBytes } from 'node:crypto';
 
 @Injectable()
 export class CryptSessionTokenGenerator implements SessionTokenGenerator {
@@ -9,13 +12,11 @@ export class CryptSessionTokenGenerator implements SessionTokenGenerator {
 
         return {
             token,
-            tokenHash: this.hash(token)
+            tokenHash: this.hash(token),
         };
     }
 
     hash(token: string): Buffer {
-        return createHash('sha256')
-            .update(token, 'utf8')
-            .digest();
+        return createHash('sha256').update(token, 'utf8').digest();
     }
 }

@@ -1,6 +1,6 @@
-import { PersonId } from "../../domain/person/person-id.js";
-import { Person } from "../../domain/person/person.js";
-import { PersonOrmEntity } from "../typeorm/entities/person.orm-entity.js";
+import { PersonId } from '../../domain/person/person-id.js';
+import { Person } from '../../domain/person/person.js';
+import { PersonOrmEntity } from '../typeorm/entities/person.orm-entity.js';
 
 export class PersonMapper {
     static toDomain(entity: PersonOrmEntity): Person {
@@ -8,7 +8,7 @@ export class PersonMapper {
             id: PersonId.from(entity.id),
             displayName: entity.displayName,
             version: entity.version,
-            createdAt: entity.createdAt
+            createdAt: entity.createdAt,
         });
     }
 

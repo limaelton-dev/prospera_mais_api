@@ -1,12 +1,11 @@
-import { SpaceId } from "../../domain/space/space-id.js";
-import { Space, SpaceStatus, SpaceType } from "../../domain/space/space.js";
-import { SpaceOrmEntity } from "../typeorm/entities/space.orm-entity.js";
-import { PersonId } from "../../domain/person/person-id.js";
+import { SpaceId } from '../../domain/space/space-id.js';
+import { Space, SpaceStatus, SpaceType } from '../../domain/space/space.js';
+import { SpaceOrmEntity } from '../typeorm/entities/space.orm-entity.js';
+import { PersonId } from '../../domain/person/person-id.js';
 
 export class SpaceMapper {
     static toDomain(entity: SpaceOrmEntity): Space {
-
-        if(!entity.personalOwnerPersonId) {
+        if (!entity.personalOwnerPersonId) {
             throw new Error('Personal space must have an owner');
         }
         return Space.restore({
@@ -17,7 +16,7 @@ export class SpaceMapper {
             version: entity.version,
             createdAt: entity.createdAt,
             updatedAt: entity.updatedAt,
-        })
+        });
     }
 
     static toPersistence(space: Space): SpaceOrmEntity {

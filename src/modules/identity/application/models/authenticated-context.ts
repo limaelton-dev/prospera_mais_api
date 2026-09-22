@@ -3,10 +3,10 @@ export type AuthenticatedContext = {
         id: string;
         displayName: string;
         email: string;
-    }
+    };
     personalSpace: {
         id: string;
         type: 'PERSONAL';
         label: 'Meu espaço';
-    }
-}
+    };
+};

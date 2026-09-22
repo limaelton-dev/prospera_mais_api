@@ -1,24 +1,24 @@
-import { PersonId } from "../person/person-id.js"
-import { SpaceId } from "./space-id.js"
+import { PersonId } from '../person/person-id.js';
+import { SpaceId } from './space-id.js';
 
 export enum SpaceType {
-    PERSONAL = 'PERSONAL'
+    PERSONAL = 'PERSONAL',
     // 'PERSONAL' | 'SHARED',
 }
 
 export enum SpaceStatus {
-    ACTIVE = 'ACTIVE'
+    ACTIVE = 'ACTIVE',
     // 'ACTIVE' | 'CLOSING' | 'CLOSED'
 }
 type SpaceProps = {
-    id: SpaceId,
-    type: SpaceType,
-    status: SpaceStatus,
-    personalOwnerPersonId: PersonId,
-    version: number,
-    createdAt: Date,
-    updatedAt: Date,
-}
+    id: SpaceId;
+    type: SpaceType;
+    status: SpaceStatus;
+    personalOwnerPersonId: PersonId;
+    version: number;
+    createdAt: Date;
+    updatedAt: Date;
+};
 
 export class Space {
     private constructor(private readonly props: SpaceProps) {}
@@ -33,7 +33,7 @@ export class Space {
             version: 1,
             createdAt: now,
             updatedAt: now,
-        })
+        });
     }
 
     static restore(props: SpaceProps): Space {
@@ -50,15 +50,15 @@ export class Space {
         return this.props.status;
     }
     get personalOwnerPersonId(): PersonId {
-        return this.props.personalOwnerPersonId
+        return this.props.personalOwnerPersonId;
     }
     get version(): number {
-        return this.props.version
+        return this.props.version;
     }
     get createdAt(): Date {
-        return this.props.createdAt
+        return this.props.createdAt;
     }
     get updatedAt(): Date {
-        return this.props.updatedAt
+        return this.props.updatedAt;
     }
 }

@@ -1,15 +1,11 @@
-import { Column, Entity, ForeignKey, Index, PrimaryColumn } from "typeorm";
+import { Column, Entity, ForeignKey, Index, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'auth_credentials' })
-@Index(
-    'UQ_auth_credentials_email',
-    ['email'],
-    { unique: true },
-)
+@Index('UQ_auth_credentials_email', ['email'], { unique: true })
 export class AuthCredentialOrmEntity {
     @PrimaryColumn({
         name: 'person_id',
-        type: 'uuid'
+        type: 'uuid',
     })
     @ForeignKey('persons', {
         name: 'FK_auth_credentials_person',
@@ -26,9 +22,9 @@ export class AuthCredentialOrmEntity {
     })
     passwordHash!: string;
 
-    @Column({ name: 'created_at', type: 'timestamptz'})
+    @Column({ name: 'created_at', type: 'timestamptz' })
     createdAt!: Date;
 
-    @Column({ name: 'updated_at', type: 'timestamptz'})
+    @Column({ name: 'updated_at', type: 'timestamptz' })
     updatedAt!: Date;
 }

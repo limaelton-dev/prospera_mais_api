@@ -1,34 +1,31 @@
-import { Check, Column, Entity, ForeignKey, Index, PrimaryColumn } from "typeorm";
+import {
+    Check,
+    Column,
+    Entity,
+    ForeignKey,
+    Index,
+    PrimaryColumn,
+} from 'typeorm';
 
 @Entity({ name: 'spaces' })
-@Check(
-    'CHK_spaces_type',
-    `"type" IN ('PERSONAL', 'SHARED')`,
-)
-@Check(
-    'CHK_spaces_status',
-    `"status" IN ('ACTIVE', 'CLOSING', 'CLOSED')`,
-  )
+@Check('CHK_spaces_type', `"type" IN ('PERSONAL', 'SHARED')`)
+@Check('CHK_spaces_status', `"status" IN ('ACTIVE', 'CLOSING', 'CLOSED')`)
 @Check(
     'CHK_spaces_personal_rules',
     `"type" <> 'PERSONAL' OR ("personal_owner_person_id" IS NOT NULL AND "status" = 'ACTIVE')`,
 )
-@Index(
-    'UQ_spaces_personal_owner',
-    ['personalOwnerPersonId'],
-    {
-      unique: true,
-      where: `"type" = 'PERSONAL'`,
-    },
-)
+@Index('UQ_spaces_personal_owner', ['personalOwnerPersonId'], {
+    unique: true,
+    where: `"type" = 'PERSONAL'`,
+})
 export class SpaceOrmEntity {
-    @PrimaryColumn({type: 'uuid'})
-    id!: string
+    @PrimaryColumn({ type: 'uuid' })
+    id!: string;
 
     @Column({ type: 'varchar', length: 16 })
     type!: string;
 
-    @Column({ type: 'varchar', length: 16})
+    @Column({ type: 'varchar', length: 16 })
     status!: string;
 
     @Column({
@@ -37,15 +34,15 @@ export class SpaceOrmEntity {
         nullable: true,
     })
     @ForeignKey('persons', 'id', {
-      name: 'FK_spaces_personal_owner',
-      onDelete: 'RESTRICT'
+        name: 'FK_spaces_personal_owner',
+        onDelete: 'RESTRICT',
     })
     personalOwnerPersonId!: string | null;
-    
-    @Column({ type: 'integer', default: 1})
+
+    @Column({ type: 'integer', default: 1 })
     version!: number;
-    
-    @Column({ name: 'created_at', type: 'timestamptz'})
+
+    @Column({ name: 'created_at', type: 'timestamptz' })
     createdAt!: Date;
 
     @Column({ name: 'updated_at', type: 'timestamptz' })

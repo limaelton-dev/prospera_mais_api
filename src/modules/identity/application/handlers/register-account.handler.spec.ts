@@ -15,11 +15,11 @@ import { SpaceId } from '../../../spaces/domain/space/space-id.js';
 describe('RegisterAccountHandler', () => {
     it('rejeita e-mail já cadastrado sem iniciar o cadastro', async () => {
         const existingCredential: AuthCredential = {
-            personId:  PersonId.create(),
+            personId: PersonId.create(),
             email: 'elton@example.com',
             passwordHash: 'existing-password-hash',
             createdAt: new Date('2026-09-01T12:00:00.000Z'),
-            updatedAt: new Date('2026-09-01T12:00:00.000Z'), 
+            updatedAt: new Date('2026-09-01T12:00:00.000Z'),
         };
 
         const credentialRepository = {
@@ -35,17 +35,17 @@ describe('RegisterAccountHandler', () => {
             findByTokenHash: vi.fn<SessionRepository['findByTokenHash']>(),
             deleteById: vi.fn<SessionRepository['deleteById']>(),
         } satisfies SessionRepository;
-      
+
         const passwordHasher = {
             hash: vi.fn<PasswordHasher['hash']>(),
             verify: vi.fn<PasswordHasher['verify']>(),
         } satisfies PasswordHasher;
-      
+
         const sessionTokenGenerator = {
             generate: vi.fn<SessionTokenGenerator['generate']>(),
             hash: vi.fn<SessionTokenGenerator['hash']>(),
         } satisfies SessionTokenGenerator;
-      
+
         const provisionPersonalContext = {
             provision: vi.fn<ProvisionPersonalContext['provision']>(),
         } satisfies ProvisionPersonalContext;
@@ -79,17 +79,18 @@ describe('RegisterAccountHandler', () => {
                 password: 'correct-horse-battery-staple',
             }),
         ).rejects.toBeInstanceOf(EmailAlreadyInUseError);
-      
-        expect(credentialRepository.findByEmail)
-            .toHaveBeenCalledWith('elton@example.com');
-        
+
+        expect(credentialRepository.findByEmail).toHaveBeenCalledWith(
+            'elton@example.com',
+        );
+
         expect(executeTransaction).not.toHaveBeenCalled();
         expect(provisionPersonalContext.provision).not.toHaveBeenCalled();
         expect(credentialRepository.save).not.toHaveBeenCalled();
         expect(sessionRepository.save).not.toHaveBeenCalled();
         expect(passwordHasher.hash).not.toHaveBeenCalled();
         expect(sessionTokenGenerator.generate).not.toHaveBeenCalled();
-    })
+    });
 
     it('cria o contexto e salva credencial e sessão na unidade de trabalho', async () => {
         const password = 'correct-horse-battery-staple';
@@ -119,7 +120,7 @@ describe('RegisterAccountHandler', () => {
                 .fn<ProvisionPersonalContext['provision']>()
                 .mockImplementation(async (input) => {
                     expect(transactionActive).toBe(true);
-        
+
                     return {
                         person: {
                             id: input.personId,
@@ -132,7 +133,7 @@ describe('RegisterAccountHandler', () => {
                         },
                     };
                 }),
-          } satisfies ProvisionPersonalContext;
+        } satisfies ProvisionPersonalContext;
 
         const credentialRepository = {
             save: vi
@@ -145,7 +146,7 @@ describe('RegisterAccountHandler', () => {
                 .mockResolvedValue(null),
             findByPersonId: vi.fn<CredentialRepository['findByPersonId']>(),
         } satisfies CredentialRepository;
-        
+
         const sessionRepository = {
             save: vi
                 .fn<SessionRepository['save']>()
@@ -155,7 +156,7 @@ describe('RegisterAccountHandler', () => {
             findByTokenHash: vi.fn<SessionRepository['findByTokenHash']>(),
             deleteById: vi.fn<SessionRepository['deleteById']>(),
         } satisfies SessionRepository;
-        
+
         const passwordHasher = {
             hash: vi
                 .fn<PasswordHasher['hash']>()
@@ -165,7 +166,7 @@ describe('RegisterAccountHandler', () => {
                 }),
             verify: vi.fn<PasswordHasher['verify']>(),
         } satisfies PasswordHasher;
-        
+
         const sessionTokenGenerator = {
             generate: vi
                 .fn<SessionTokenGenerator['generate']>()
@@ -175,11 +176,11 @@ describe('RegisterAccountHandler', () => {
                 }),
             hash: vi.fn<SessionTokenGenerator['hash']>(),
         } satisfies SessionTokenGenerator;
-        
+
         const configService = new ConfigService({
             SESSION_TTL_SECONDS: sessionTtlSeconds,
         });
-        
+
         const handler = new RegisterAccountHandler(
             unitOfWork,
             provisionPersonalContext,
@@ -192,7 +193,7 @@ describe('RegisterAccountHandler', () => {
 
         const result = await handler.execute({
             displayName: 'Elton',
-            email: '  ELTON@EXAMPLE.COM  ',
+            email: '  ELTON@EXAMPLE.COM  ', //example no normalized to test
             password,
         });
 
@@ -201,8 +202,9 @@ describe('RegisterAccountHandler', () => {
         expect(credentialRepository.save).toHaveBeenCalledTimes(1);
         expect(sessionRepository.save).toHaveBeenCalledTimes(1);
 
-        expect(credentialRepository.findByEmail)
-            .toHaveBeenCalledWith('elton@example.com');
+        expect(credentialRepository.findByEmail).toHaveBeenCalledWith(
+            'elton@example.com',
+        ); //expected normalized
 
         expect(passwordHasher.hash).toHaveBeenCalledWith(password);
 
@@ -224,7 +226,6 @@ describe('RegisterAccountHandler', () => {
             updatedAt: expect.any(Date),
         });
 
-
         expect(savedSession).toEqual({
             id: expect.any(String),
             personId: provisionInput.personId,
@@ -234,7 +235,6 @@ describe('RegisterAccountHandler', () => {
                 savedSession.createdAt.getTime() + sessionTtlSeconds * 1000,
             ),
         });
-
 
         expect(result).toEqual({
             sessionToken,
@@ -253,5 +253,101 @@ describe('RegisterAccountHandler', () => {
         });
 
         expect(transactionActive).toBe(false);
-    })
-})
+    });
+
+    it('propaga falha no provisionamento e desfaz a criação parcial', async () => {
+        const provisionError = new Error('Falha ao criar espaço pessoal');
+
+        const provisionedPersonIds: PersonId[] = [];
+
+        const unitOfWork: UnitOfWork = {
+            async execute<T>(work: () => Promise<T>): Promise<T> {
+                const previousPersonIds = [...provisionedPersonIds];
+
+                try {
+                    return await work();
+                } catch (error: unknown) {
+                    provisionedPersonIds.splice(
+                        0,
+                        provisionedPersonIds.length,
+                        ...previousPersonIds,
+                    );
+
+                    throw error;
+                }
+            },
+        };
+
+        const executeTransaction = vi.spyOn(unitOfWork, 'execute');
+
+        const provisionPersonalContext = {
+            provision: vi
+                .fn<ProvisionPersonalContext['provision']>()
+                .mockImplementation(async (input) => {
+                    provisionedPersonIds.push(input.personId);
+
+                    throw provisionError;
+                }),
+        } satisfies ProvisionPersonalContext;
+
+        const credentialRepository = {
+            save: vi.fn<CredentialRepository['save']>(),
+            findByEmail: vi
+                .fn<CredentialRepository['findByEmail']>()
+                .mockResolvedValue(null),
+            findByPersonId: vi.fn<CredentialRepository['findByPersonId']>(),
+        } satisfies CredentialRepository;
+
+        const sessionRepository = {
+            save: vi.fn<SessionRepository['save']>(),
+            findByTokenHash: vi.fn<SessionRepository['findByTokenHash']>(),
+            deleteById: vi.fn<SessionRepository['deleteById']>(),
+        } satisfies SessionRepository;
+
+        const passwordHasher = {
+            hash: vi
+                .fn<PasswordHasher['hash']>()
+                .mockResolvedValue('generated-password-hash'),
+            verify: vi.fn<PasswordHasher['verify']>(),
+        } satisfies PasswordHasher;
+
+        const sessionTokenGenerator = {
+            generate: vi
+                .fn<SessionTokenGenerator['generate']>()
+                .mockReturnValue({
+                    token: 'generated-session-token',
+                    tokenHash: Buffer.alloc(32, 1),
+                }),
+            hash: vi.fn<SessionTokenGenerator['hash']>(),
+        } satisfies SessionTokenGenerator;
+
+        const configService = new ConfigService({
+            SESSION_TTL_SECONDS: 604800,
+        });
+
+        const handler = new RegisterAccountHandler(
+            unitOfWork,
+            provisionPersonalContext,
+            credentialRepository,
+            sessionRepository,
+            passwordHasher,
+            sessionTokenGenerator,
+            configService,
+        );
+
+        await expect(
+            handler.execute({
+                displayName: 'Elton',
+                email: 'elton@example.com',
+                password: 'correct-horse-battery-staple',
+            }),
+        ).rejects.toBe(provisionError);
+
+        expect(executeTransaction).toHaveBeenCalledTimes(1);
+        expect(provisionPersonalContext.provision).toHaveBeenCalledTimes(1);
+
+        expect(provisionedPersonIds).toEqual([]);
+        expect(credentialRepository.save).not.toHaveBeenCalled();
+        expect(sessionRepository.save).not.toHaveBeenCalled();
+    });
+});

@@ -1,10 +1,19 @@
-import { Inject, Injectable } from "@nestjs/common";
-import type { ProvisionPersonalContext, ProvisionPersonalContextInput } from "../ports/public/provision-personal-context.js";
-import { PERSON_REPOSITORY, type PersonRepository } from "../ports/private/person.repository.js";
-import { SPACE_REPOSITORY, type SpaceRepository } from "../ports/private/space.repository.js";
-import { Person } from "../../domain/person/person.js";
-import { Space } from "../../domain/space/space.js";
-import type { PersonalContext } from "../models/personal-context.js";
+import { Inject, Injectable } from '@nestjs/common';
+import type {
+    ProvisionPersonalContext,
+    ProvisionPersonalContextInput,
+} from '../ports/public/provision-personal-context.js';
+import {
+    PERSON_REPOSITORY,
+    type PersonRepository,
+} from '../ports/private/person.repository.js';
+import {
+    SPACE_REPOSITORY,
+    type SpaceRepository,
+} from '../ports/private/space.repository.js';
+import { Person } from '../../domain/person/person.js';
+import { Space } from '../../domain/space/space.js';
+import type { PersonalContext } from '../models/personal-context.js';
 
 @Injectable()
 export class ProvisionPersonalContextService implements ProvisionPersonalContext {
@@ -16,11 +25,10 @@ export class ProvisionPersonalContextService implements ProvisionPersonalContext
         private readonly spaceRepository: SpaceRepository,
     ) {}
 
-    async provision(input: ProvisionPersonalContextInput): Promise<PersonalContext> {
-        const person = Person.create(
-            input.personId,
-            input.displayName,
-        );
+    async provision(
+        input: ProvisionPersonalContextInput,
+    ): Promise<PersonalContext> {
+        const person = Person.create(input.personId, input.displayName);
 
         const personalSpace = Space.createPersonal(
             input.spaceId,
@@ -33,11 +41,11 @@ export class ProvisionPersonalContextService implements ProvisionPersonalContext
         return {
             person: {
                 id: person.id,
-                displayName: person.displayName
+                displayName: person.displayName,
             },
             personalSpace: {
                 id: personalSpace.id,
-                type: "PERSONAL",
+                type: 'PERSONAL',
                 label: 'Meu espaço',
             },
         };

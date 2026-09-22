@@ -1,5 +1,5 @@
-import type { PersonId } from "../../domain/person/person-id.js";
-import type { SpaceId } from "../../domain/space/space-id.js";
+import type { PersonId } from '../../domain/person/person-id.js';
+import type { SpaceId } from '../../domain/space/space-id.js';
 
 export type PersonalContext = {
     person: {
