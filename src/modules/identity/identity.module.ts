@@ -13,6 +13,7 @@ import { PASSWORD_HASHER } from './application/ports/private/password-hasher.js'
 import { SESSION_TOKEN_GENERATOR } from './application/ports/private/session-token-generator.js';
 import { SpacesModule } from '../spaces/spaces.module.js';
 import { RegisterAccountHandler } from './application/handlers/register-account.handler.js';
+import { LoginHandler } from './application/handlers/login.handler.js';
 
 @Module({
     imports: [
@@ -32,6 +33,7 @@ import { RegisterAccountHandler } from './application/handlers/register-account.
         CryptSessionTokenGenerator,
 
         RegisterAccountHandler,
+        LoginHandler,
 
         {
             provide: CREDENTIAL_REPOSITORY,
