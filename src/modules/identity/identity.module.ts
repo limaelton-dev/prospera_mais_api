@@ -1,20 +1,28 @@
 import { Module } from '@nestjs/common';
-import { DatabaseModule } from '../../shared/technical/database/database.module.js';
+import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
+
+import { DatabaseModule } from '../../shared/technical/database/database.module.js';
+import { SpacesModule } from '../spaces/spaces.module.js';
+
 import { AuthCredentialOrmEntity } from './infrastructure/typeorm/entities/auth-credential.orm-entity.js';
 import { AuthSessionOrmEntity } from './infrastructure/typeorm/entities/auth-session.orm-entity.js';
 import { TypeOrmCredentialRepository } from './infrastructure/typeorm/repositories/typeorm-credential.repository.js';
 import { TypeOrmSessionRepository } from './infrastructure/typeorm/repositories/typeorm-session.repository.js';
-import { CREDENTIAL_REPOSITORY } from './application/ports/private/credential.repository.js';
-import { SESSION_REPOSITORY } from './application/ports/private/session.repository.js';
+
 import { Argon2PasswordHasher } from './infrastructure/security/argon2-password-hasher.js';
 import { CryptSessionTokenGenerator } from './infrastructure/security/crypto-session-token-generator.js';
+
+import { CREDENTIAL_REPOSITORY } from './application/ports/private/credential.repository.js';
+import { SESSION_REPOSITORY } from './application/ports/private/session.repository.js';
 import { PASSWORD_HASHER } from './application/ports/private/password-hasher.js';
 import { SESSION_TOKEN_GENERATOR } from './application/ports/private/session-token-generator.js';
-import { SpacesModule } from '../spaces/spaces.module.js';
+
 import { RegisterAccountHandler } from './application/handlers/register-account.handler.js';
 import { LoginHandler } from './application/handlers/login.handler.js';
 import { SessionService } from './application/services/session.service.js';
+
+import { SessionAuthGuard } from './http/guards/session-auth.guard.js';
 
 @Module({
     imports: [
@@ -36,7 +44,12 @@ import { SessionService } from './application/services/session.service.js';
         RegisterAccountHandler,
         LoginHandler,
         SessionService,
+        SessionAuthGuard,
 
+        {
+            provide: APP_GUARD,
+            useExisting: SessionAuthGuard,
+        },
         {
             provide: CREDENTIAL_REPOSITORY,
             useExisting: TypeOrmCredentialRepository,
