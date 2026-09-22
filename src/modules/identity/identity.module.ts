@@ -11,6 +11,8 @@ import { Argon2PasswordHasher } from "./infrastructure/security/argon2-password-
 import { CryptSessionTokenGenerator } from "./infrastructure/security/crypto-session-token-generator.js";
 import { PASSWORD_HASHER } from "./application/ports/private/password-hasher.js";
 import { SESSION_TOKEN_GENERATOR } from "./application/ports/private/session-token-generator.js";
+import { SpacesModule } from "../spaces/spaces.module.js";
+import { RegisterAccountHandler } from "./application/handlers/register-account.handler.js";
 
 @Module({
     imports: [
@@ -19,6 +21,7 @@ import { SESSION_TOKEN_GENERATOR } from "./application/ports/private/session-tok
             AuthCredentialOrmEntity,
             AuthSessionOrmEntity,
         ]),
+        SpacesModule,
     ],
 
     providers: [
@@ -27,6 +30,8 @@ import { SESSION_TOKEN_GENERATOR } from "./application/ports/private/session-tok
         
         Argon2PasswordHasher,
         CryptSessionTokenGenerator,
+
+        RegisterAccountHandler,
 
         {
             provide: CREDENTIAL_REPOSITORY,
