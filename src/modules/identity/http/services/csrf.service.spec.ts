@@ -160,3 +160,201 @@ describe('CsrfService: geração e cookies', () => {
         expect(firstToken).not.toBe(secondToken);
     });
 });
+
+describe('CsrfService: proteção das requisições', () => {
+    function createProtectedContext(
+        environment = 'test',
+        initialCookies: Record<string, unknown> = {},
+    ) {
+        const context = createContext(environment, initialCookies);
+
+        const token = context.service.generateToken(
+            context.request,
+            context.response,
+        );
+
+        const cookieName =
+            environment === 'production' ? '__Host-csrf' : 'csrf';
+
+        // Simula o navegador devolvendo o cookie e o header.
+        context.cookies[cookieName] = token;
+        context.request.method = 'POST';
+        context.request.headers = { 'x-csrf-token': token };
+
+        return { ...context, token };
+    }
+
+    function protect(context: ReturnType<typeof createContext>) {
+        const next = vi.fn();
+
+        context.service.protection(
+            context.request,
+            context.response,
+            next,
+        );
+
+        return next;
+    }
+
+    const invalidCsrf = expect.objectContaining({
+        statusCode: 403,
+        code: 'INVALID_CSRF_TOKEN',
+        message:
+            'Não foi possível validar esta solicitação. Atualize a página e tente novamente.',
+    });
+
+    it.each(['GET', 'HEAD', 'OPTIONS'])(
+        'libera %s sem token',
+        (method) => {
+            const context = createContext();
+            context.request.method = method;
+            context.request.headers = {};
+
+            expect(protect(context)).toHaveBeenCalledExactlyOnceWith();
+        },
+    );
+
+    it.each(['POST', 'PUT', 'PATCH', 'DELETE'])(
+        'rejeita %s sem o header CSRF',
+        (method) => {
+            const context = createProtectedContext();
+            context.request.method = method;
+            delete context.request.headers['x-csrf-token'];
+
+            expect(protect(context)).toHaveBeenCalledExactlyOnceWith(
+                invalidCsrf,
+            );
+        },
+    );
+
+    it.each(environments)(
+        'aceita token anônimo válido em $environment',
+        ({ environment }) => {
+            const context = createProtectedContext(environment);
+
+            expect(protect(context)).toHaveBeenCalledExactlyOnceWith();
+        },
+    );
+
+    it.each(environments)(
+        'aceita token vinculado à sessão em $environment',
+        ({ environment, prefix }) => {
+            const context = createProtectedContext(environment, {
+                [`${prefix}session`]: 'authenticated-session',
+            });
+
+            expect(protect(context)).toHaveBeenCalledExactlyOnceWith();
+        },
+    );
+
+    it.each([
+        { label: 'incorreto', value: 'wrong-token' },
+        { label: 'com múltiplos valores', value: ['first', 'second'] },
+    ])('rejeita header $label', ({ value }) => {
+        const context = createProtectedContext();
+
+        Object.assign(context.request.headers, {
+            'x-csrf-token': value,
+        });
+
+        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(
+            invalidCsrf,
+        );
+    });
+
+    it('rejeita token no corpo ou na query sem o header', () => {
+        const context = createProtectedContext();
+        context.request.headers = {};
+        context.request.body = { csrfToken: context.token };
+        context.request.query = { csrfToken: context.token };
+
+        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(
+            invalidCsrf,
+        );
+    });
+
+    it('rejeita header válido sem o cookie CSRF', () => {
+        const context = createProtectedContext();
+        delete context.cookies.csrf;
+
+        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(
+            invalidCsrf,
+        );
+    });
+
+    it('rejeita cookie e header iguais quando a assinatura foi adulterada', () => {
+        const context = createProtectedContext();
+
+        const forgedToken =
+            (context.token.startsWith('0') ? '1' : '0') +
+            context.token.slice(1);
+
+        context.cookies.csrf = forgedToken;
+        context.request.headers['x-csrf-token'] = forgedToken;
+
+        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(
+            invalidCsrf,
+        );
+    });
+
+    it('rejeita token emitido para outro contexto anônimo', () => {
+        const context = createProtectedContext();
+        context.cookies['csrf-context'] = 'another-anonymous-context';
+
+        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(
+            invalidCsrf,
+        );
+    });
+
+    it('lança o erro CSRF quando o identificador anônimo desaparece', () => {
+        const context = createProtectedContext();
+        delete context.cookies['csrf-context'];
+
+        expect(() => protect(context)).toThrow(invalidCsrf);
+    });
+
+    it.each([
+        {
+            label: 'login',
+            before: undefined,
+            after: 'session-b',
+        },
+        {
+            label: 'troca de sessão',
+            before: 'session-a',
+            after: 'session-b',
+        },
+        {
+            label: 'logout',
+            before: 'session-a',
+            after: undefined,
+        },
+    ])('exige novo token após $label', ({ before, after }) => {
+        const context = createProtectedContext('test', {
+            'csrf-context': 'anonymous-context',
+            session: before,
+        });
+
+        if (after === undefined) {
+            delete context.cookies.session;
+        } else {
+            context.cookies.session = after;
+        }
+
+        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(
+            invalidCsrf,
+        );
+
+        const newToken = context.service.generateToken(
+            context.request,
+            context.response,
+        );
+
+        expect(newToken).not.toBe(context.token);
+
+        context.cookies.csrf = newToken;
+        context.request.headers['x-csrf-token'] = newToken;
+
+        expect(protect(context)).toHaveBeenCalledExactlyOnceWith();
+    });
+});
