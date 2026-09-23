@@ -1,16 +1,16 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { type CredentialRepository } from "../ports/private/credential.repository.js";
-import { type GetPersonalContext } from "../../../spaces/application/ports/public/get-personal-context.js";
+import { CREDENTIAL_REPOSITORY, type CredentialRepository } from "../ports/private/credential.repository.js";
+import { GET_PERSONAL_CONTEXT, type GetPersonalContext } from "../../../spaces/application/ports/public/get-personal-context.js";
 import { PersonId } from "../../../spaces/domain/person/person-id.js";
 import { AuthenticatedContext } from "../models/authenticated-context.js";
 
 @Injectable()
 export class GetCurrentContextQuery {
     constructor(
-        @Inject()
+        @Inject(CREDENTIAL_REPOSITORY)
         private readonly credentialRepository: CredentialRepository,
 
-        @Inject()
+        @Inject(GET_PERSONAL_CONTEXT)
         private readonly getPersonalContext: GetPersonalContext,
     ) {}
 
