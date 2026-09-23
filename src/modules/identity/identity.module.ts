@@ -27,6 +27,7 @@ import { CsrfService } from './http/services/csrf.service.js';
 import { AuthController } from './http/controllers/auth.controller.js';
 import { LogoutHandler } from './application/handlers/logout.handler.js';
 import { GetCurrentContextQuery } from './application/queries/get-current-context.query.js';
+import { SessionCookieService } from './http/services/session-cookie.service.js';
 
 @Module({
     imports: [
@@ -52,6 +53,7 @@ import { GetCurrentContextQuery } from './application/queries/get-current-contex
         CsrfService,
         LogoutHandler,
         GetCurrentContextQuery,
+        SessionCookieService,
 
         {
             provide: APP_GUARD,
