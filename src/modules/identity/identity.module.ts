@@ -23,6 +23,7 @@ import { LoginHandler } from './application/handlers/login.handler.js';
 import { SessionService } from './application/services/session.service.js';
 
 import { SessionAuthGuard } from './http/guards/session-auth.guard.js';
+import { CsrfService } from './http/services/csrf.service.js';
 
 @Module({
     imports: [
@@ -45,6 +46,7 @@ import { SessionAuthGuard } from './http/guards/session-auth.guard.js';
         LoginHandler,
         SessionService,
         SessionAuthGuard,
+        CsrfService,
 
         {
             provide: APP_GUARD,
