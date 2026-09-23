@@ -25,6 +25,8 @@ import { SessionService } from './application/services/session.service.js';
 import { SessionAuthGuard } from './http/guards/session-auth.guard.js';
 import { CsrfService } from './http/services/csrf.service.js';
 import { AuthController } from './http/controllers/auth.controller.js';
+import { LogoutHandler } from './application/handlers/logout.handler.js';
+import { GetCurrentContextQuery } from './application/queries/get-current-context.query.js';
 
 @Module({
     imports: [
@@ -48,6 +50,8 @@ import { AuthController } from './http/controllers/auth.controller.js';
         SessionService,
         SessionAuthGuard,
         CsrfService,
+        LogoutHandler,
+        GetCurrentContextQuery,
 
         {
             provide: APP_GUARD,
