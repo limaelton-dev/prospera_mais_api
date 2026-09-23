@@ -19,10 +19,12 @@ export class CsrfService {
         const secret = configService.getOrThrow<string>('CSRF_SECRET');
 
         this.sessionCookieName = isProduction ? '__Host-session' : 'session';
+
         this.contextCookieName = isProduction
-            ? '__Host-session'
+            ? '__Host-csrf-context'
             : 'csrf-context';
-        this.tokenCookieName = isProduction ? '__Host-session' : 'csrf';
+        
+        this.tokenCookieName = isProduction ? '__Host-csrf' : 'csrf';
 
         this.cookieOptions = {
             httpOnly: true,
@@ -36,6 +38,7 @@ export class CsrfService {
             getSessionIdentifier: (request) =>
                 this.getSessionIdentifier(request),
             cookieName: this.tokenCookieName,
+            cookieOptions: this.cookieOptions,
             ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
             getCsrfTokenFromRequest: (request) => {
                 const token = request.headers['x-csrf-token'];
@@ -59,7 +62,7 @@ export class CsrfService {
         request.cookies ??= {};
 
         const sessionToken = this.readCookie(request, this.sessionCookieName);
-        const contextId = this.readCookie(request, this.sessionCookieName);
+        const contextId = this.readCookie(request, this.contextCookieName);
 
         if(!sessionToken && !contextId) {
             const newContextId = randomBytes(32).toString('base64url');
@@ -97,8 +100,7 @@ export class CsrfService {
     }
     
     private readCookie(request: Request, name: string): string | undefined {
-        const value: unknown = request.cookies?.name[name];
-
+        const value: unknown = request.cookies?.[name];
         return typeof value === 'string' && value.length > 0 
             ? value
             : undefined;
