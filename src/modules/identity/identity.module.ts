@@ -24,6 +24,7 @@ import { SessionService } from './application/services/session.service.js';
 
 import { SessionAuthGuard } from './http/guards/session-auth.guard.js';
 import { CsrfService } from './http/services/csrf.service.js';
+import { AuthController } from './http/controllers/auth.controller.js';
 
 @Module({
     imports: [
@@ -68,6 +69,10 @@ import { CsrfService } from './http/services/csrf.service.js';
             provide: SESSION_TOKEN_GENERATOR,
             useExisting: CryptSessionTokenGenerator,
         },
+    ],
+
+    controllers: [
+        AuthController,
     ],
 
     exports: [],
