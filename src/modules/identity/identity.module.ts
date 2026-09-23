@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 import { DatabaseModule } from '../../shared/technical/database/database.module.js';
 import { SpacesModule } from '../spaces/spaces.module.js';
@@ -36,6 +37,12 @@ import { SessionCookieService } from './http/services/session-cookie.service.js'
             AuthCredentialOrmEntity,
             AuthSessionOrmEntity,
         ]),
+        ThrottlerModule.forRoot([
+            {
+                ttl: 60000,
+                limit: 60,
+            },
+        ]),
         SpacesModule,
     ],
 
@@ -54,6 +61,8 @@ import { SessionCookieService } from './http/services/session-cookie.service.js'
         LogoutHandler,
         GetCurrentContextQuery,
         SessionCookieService,
+
+        ThrottlerGuard,
 
         {
             provide: APP_GUARD,

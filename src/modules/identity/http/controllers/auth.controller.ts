@@ -8,8 +8,10 @@ import {
     Post,
     Req,
     Res,
+    UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 
 import { RegisterAccountHandler } from '../../application/handlers/register-account.handler.js';
 import { LoginHandler } from '../../application/handlers/login.handler.js';
@@ -50,6 +52,8 @@ export class AuthController {
 
     @Public()
     @Post('register')
+    @UseGuards(ThrottlerGuard)
+    @Throttle({ default: { limit: 5, ttl: 600000 } })
     @HttpCode(HttpStatus.CREATED)
     @Header('Cache-Control', 'no-store')
     async register(
@@ -64,6 +68,8 @@ export class AuthController {
 
     @Public()
     @Post('login')
+    @UseGuards(ThrottlerGuard)
+    @Throttle({ default: { limit: 10, ttl: 60000 } })
     @HttpCode(HttpStatus.OK)
     @Header('Cache-Control', 'no-store')
     async login(
