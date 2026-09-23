@@ -19,7 +19,7 @@ export class GetCurrentContextQuery {
             await this.credentialRepository.findByPersonId(personId);
 
         if(!credential) {
-            throw new Error('Authenticatede person has no credential');
+            throw new Error('Authenticated person has no credential');
         }
 
         const personalContext = 
