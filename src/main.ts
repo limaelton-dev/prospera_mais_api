@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 
 import { AppModule } from './app.module.js';
 import { CsrfService } from './modules/identity/http/services/csrf.service.js';
+import { createValidationException } from './shared/technical/http/validation/create-validation-exception.js';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
@@ -36,6 +37,11 @@ async function bootstrap() {
             whitelist: true,
             forbidNonWhitelisted: true,
             transform: true,
+            validationError: {
+                target: false,
+                value: false,
+            },
+            exceptionFactory: createValidationException,
         }),
     );
 

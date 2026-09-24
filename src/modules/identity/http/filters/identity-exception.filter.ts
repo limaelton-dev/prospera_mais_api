@@ -24,6 +24,8 @@ export class IdentityExceptionFilter implements ExceptionFilter<IdentityError>
                 ? HttpStatus.CONFLICT
                 : HttpStatus.UNAUTHORIZED;
 
+        response.setHeader('Cache-Control', 'no-store');
+
         response.status(status).json({
             code: exception.code,
             message: exception.message,
