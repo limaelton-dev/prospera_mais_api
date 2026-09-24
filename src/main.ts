@@ -8,6 +8,8 @@ import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module.js';
 import { CsrfService } from './modules/identity/http/services/csrf.service.js';
 import { createValidationException } from './shared/technical/http/validation/create-validation-exception.js';
+import { createAuthOpenApiDocument } from './modules/identity/http/openapi/auth.openapi.js';
+import { SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
@@ -44,6 +46,20 @@ async function bootstrap() {
             exceptionFactory: createValidationException,
         }),
     );
+
+    const document = createAuthOpenApiDocument(
+        configService.getOrThrow<string>('NODE_ENV') === 'production',
+    );
+
+    SwaggerModule.setup('docs', app, document, {
+        useGlobalPrefix: true,
+        jsonDocumentUrl: 'openapi.json',
+        yamlDocumentUrl: 'openapi.yaml',
+        swaggerOptions: {
+            withCredentials: true,
+            persistAuthorization: false,
+        },
+    });
 
     const port = configService.get<number>('PORT') ?? 3001;
 
