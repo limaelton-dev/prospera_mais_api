@@ -40,6 +40,7 @@ export class AuthController {
 
     @Public()
     @Get('csrf')
+    @UseGuards(ThrottlerGuard)
     @Throttle({ default: { limit: 60, ttl: 60000 } })
     @Header('Cache-Control', 'no-store')
     getCsrfToken(
