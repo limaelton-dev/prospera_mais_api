@@ -25,6 +25,11 @@ export class Space {
 
     static createPersonal(id: SpaceId, ownerPersonId: PersonId): Space {
         const now = new Date();
+
+        if (!ownerPersonId) {
+            throw new Error('Personal space requires an owner');
+        }
+        
         return new Space({
             id,
             type: SpaceType.PERSONAL,

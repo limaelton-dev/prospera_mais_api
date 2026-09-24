@@ -1,0 +1,18 @@
+name: prospera-mais-tests
+
+services:
+    postgres:
+        image: postgres:18.6-alpine
+        environment:
+            POSTGRES_USER: test
+            POSTGRES_PASSWORD: test
+            POSTGRES_DB: prospera_mais_test
+        ports:
+            - "127.0.0.1:55432:5432"
+        tmpfs:
+            - /var/lib/postgresql
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U test -d prospera_mais_test"]
+            interval: 2s
+            timeout: 3s
+            retries: 30
