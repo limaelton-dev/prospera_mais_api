@@ -1,14 +1,14 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID } from 'node:crypto';
 
 export class PersonId {
-    private constructor(public readonly value: string){}
+    private constructor(public readonly value: string) {}
 
     static create(): PersonId {
         return new PersonId(randomUUID());
     }
 
     static from(value: string): PersonId {
-        if(!value) {
+        if (!value) {
             throw new Error('PersonId cannot be empty');
         }
 

@@ -1,39 +1,44 @@
-import { PersonId } from "./person/person-id.js"
-import { SpaceId } from "./space-id.js"
+import { PersonId } from '../person/person-id.js';
+import { SpaceId } from './space-id.js';
 
 export enum SpaceType {
-    PERSONAL = 'PERSONAL'
+    PERSONAL = 'PERSONAL',
     // 'PERSONAL' | 'SHARED',
 }
 
 export enum SpaceStatus {
-    ACTIVE = 'ACTIVE'
+    ACTIVE = 'ACTIVE',
     // 'ACTIVE' | 'CLOSING' | 'CLOSED'
 }
 type SpaceProps = {
-    id: SpaceId,
-    type: SpaceType,
-    status: SpaceStatus,
-    personalOwnerPersonId: PersonId,
-    version: number,
-    createdAt: Date,
-    updatedAt: Date,
-}
+    id: SpaceId;
+    type: SpaceType;
+    status: SpaceStatus;
+    personalOwnerPersonId: PersonId;
+    version: number;
+    createdAt: Date;
+    updatedAt: Date;
+};
 
 export class Space {
     private constructor(private readonly props: SpaceProps) {}
 
-    static createPersonal(ownerPersonId: PersonId): Space {
+    static createPersonal(id: SpaceId, ownerPersonId: PersonId): Space {
         const now = new Date();
+
+        if (!ownerPersonId) {
+            throw new Error('Personal space requires an owner');
+        }
+
         return new Space({
-            id: SpaceId.create(),
+            id,
             type: SpaceType.PERSONAL,
             status: SpaceStatus.ACTIVE,
             personalOwnerPersonId: ownerPersonId,
             version: 1,
             createdAt: now,
             updatedAt: now,
-        })
+        });
     }
 
     static restore(props: SpaceProps): Space {
@@ -41,24 +46,24 @@ export class Space {
     }
 
     get id(): SpaceId {
-        return this.id;
+        return this.props.id;
     }
     get type(): SpaceType {
-        return this.type;
+        return this.props.type;
     }
     get status(): SpaceStatus {
-        return this.status;
+        return this.props.status;
     }
     get personalOwnerPersonId(): PersonId {
-        return this.personalOwnerPersonId
+        return this.props.personalOwnerPersonId;
     }
     get version(): number {
-        return this.version
+        return this.props.version;
     }
     get createdAt(): Date {
-        return this.createdAt
+        return this.props.createdAt;
     }
     get updatedAt(): Date {
-        return this.updatedAt
+        return this.props.updatedAt;
     }
 }

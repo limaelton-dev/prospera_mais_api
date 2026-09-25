@@ -1,7 +1,7 @@
-import { Injectable } from "@nestjs/common";
-import { UnitOfWork } from "../../../application/unit-of-work.js";
-import { DataSource } from "typeorm";
-import { TransactionContext } from "./transaction-context.js";
+import { Injectable } from '@nestjs/common';
+import { UnitOfWork } from '../../../application/unit-of-work.js';
+import { DataSource } from 'typeorm';
+import { TransactionContext } from './transaction-context.js';
 
 @Injectable()
 export class TypeOrmUnitOfWork implements UnitOfWork {
@@ -11,7 +11,7 @@ export class TypeOrmUnitOfWork implements UnitOfWork {
     ) {}
 
     execute<T>(work: () => Promise<T>): Promise<T> {
-        return this.dataSource.transaction((entityManager) => 
+        return this.dataSource.transaction((entityManager) =>
             this.transactionContext.run(entityManager, work),
         );
     }
