@@ -1,8 +1,14 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { SESSION_REPOSITORY, type SessionRepository } from "../ports/private/session.repository.js";
-import { SESSION_TOKEN_GENERATOR, type SessionTokenGenerator } from "../ports/private/session-token-generator.js";
-import { AuthenticatedActor } from "../models/authenticated-actor.js";
-import { UnauthenticatedError } from "../errors/unauthenticated.error.js";
+import { Inject, Injectable } from '@nestjs/common';
+import {
+    SESSION_REPOSITORY,
+    type SessionRepository,
+} from '../ports/private/session.repository.js';
+import {
+    SESSION_TOKEN_GENERATOR,
+    type SessionTokenGenerator,
+} from '../ports/private/session-token-generator.js';
+import { AuthenticatedActor } from '../models/authenticated-actor.js';
+import { UnauthenticatedError } from '../errors/unauthenticated.error.js';
 
 @Injectable()
 export class SessionService {
@@ -15,29 +21,25 @@ export class SessionService {
     ) {}
 
     async authenticate(sessionToken: unknown): Promise<AuthenticatedActor> {
-        if(
-            typeof sessionToken !== 'string' ||
-            sessionToken.length === 0
-        ) {
+        if (typeof sessionToken !== 'string' || sessionToken.length === 0) {
             throw new UnauthenticatedError();
         }
 
         const tokenHash = this.sessionTokenGenerator.hash(sessionToken);
 
-        const session = 
-            await this.sessionRepository.findByTokenHash(tokenHash);
+        const session = await this.sessionRepository.findByTokenHash(tokenHash);
 
-        if(!session) {
+        if (!session) {
             throw new UnauthenticatedError();
         }
 
-        if(session.expiresAt.getTime() <= Date.now()) {
+        if (session.expiresAt.getTime() <= Date.now()) {
             throw new UnauthenticatedError();
         }
 
         return {
             personId: session.personId,
             sessionId: session.id,
-        }
+        };
     }
 }

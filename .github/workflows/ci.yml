@@ -1,0 +1,61 @@
+name: API CI
+
+on:
+    push:
+        branches:
+            - main
+            - 'card/**'
+            - card-001-account-session
+    pull_request:
+        branches:
+            - main
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    checks:
+        name: API checks
+        runs-on: ubuntu-24.04
+        timeout-minutes: 15
+
+        steps:
+            - name: Obter o código
+              uses: actions/checkout@v7
+              with:
+                  persist-credentials: false
+
+            - name: Preparar Node
+              uses: actions/setup-node@v7
+              with:
+                  node-version-file: .nvmrc
+                  cache: npm
+
+            - name: Instalar dependências
+              run: npm ci
+
+            - name: Lint
+              run: npm run lint
+
+            - name: Formatação
+              run: npm run format:check
+
+            - name: Testes unitários
+              run: npm test
+
+            - name: Iniciar PostgreSQL de teste
+              run: docker compose -f compose.test.yaml up -d --wait
+
+            - name: Build e testes PostgreSQL/HTTP
+              run: npm run test:e2e
+
+            - name: Tipos da aplicação e dos testes
+              run: npm run typecheck
+
+            - name: Encerrar PostgreSQL de teste
+              if: always()
+              run: docker compose -f compose.test.yaml down

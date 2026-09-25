@@ -1,23 +1,38 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { AuthenticatedContext } from "../models/authenticated-context.js";
-import { ConfigService } from "@nestjs/config";
-import { CREDENTIAL_REPOSITORY, type CredentialRepository } from "../ports/private/credential.repository.js";
-import { SESSION_TOKEN_GENERATOR, type SessionTokenGenerator } from "../ports/private/session-token-generator.js";
-import { SESSION_REPOSITORY, type SessionRepository } from "../ports/private/session.repository.js";
-import { GET_PERSONAL_CONTEXT, type GetPersonalContext } from "../../../spaces/application/ports/public/get-personal-context.js";
-import { PASSWORD_HASHER, type PasswordHasher } from "../ports/private/password-hasher.js";
-import { InvalidCredentialsError } from "../errors/invalid-credentials.error.js";
-import { randomUUID } from "node:crypto";
+import { Inject, Injectable } from '@nestjs/common';
+import { AuthenticatedContext } from '../models/authenticated-context.js';
+import { ConfigService } from '@nestjs/config';
+import {
+    CREDENTIAL_REPOSITORY,
+    type CredentialRepository,
+} from '../ports/private/credential.repository.js';
+import {
+    SESSION_TOKEN_GENERATOR,
+    type SessionTokenGenerator,
+} from '../ports/private/session-token-generator.js';
+import {
+    SESSION_REPOSITORY,
+    type SessionRepository,
+} from '../ports/private/session.repository.js';
+import {
+    GET_PERSONAL_CONTEXT,
+    type GetPersonalContext,
+} from '../../../spaces/application/ports/public/get-personal-context.js';
+import {
+    PASSWORD_HASHER,
+    type PasswordHasher,
+} from '../ports/private/password-hasher.js';
+import { InvalidCredentialsError } from '../errors/invalid-credentials.error.js';
+import { randomUUID } from 'node:crypto';
 
 export type LoginInput = {
-    email: string,
-    password: string,
-}
+    email: string;
+    password: string;
+};
 
 export type LoginResult = {
     sessionToken: string;
     context: AuthenticatedContext;
-}
+};
 
 @Injectable()
 export class LoginHandler {
@@ -43,25 +58,26 @@ export class LoginHandler {
     async execute(input: LoginInput): Promise<LoginResult> {
         const email = input.email.trim().toLowerCase();
 
-        const credential = 
-            await this.credentialRepository.findByEmail(email);
+        const credential = await this.credentialRepository.findByEmail(email);
 
-        if(!credential) {
+        if (!credential) {
             throw new InvalidCredentialsError();
         }
 
         const passwordMatches = await this.passwordHasher.verify(
             input.password,
-            credential.passwordHash
-        )
+            credential.passwordHash,
+        );
 
-        if(!passwordMatches) {
+        if (!passwordMatches) {
             throw new InvalidCredentialsError();
         }
 
-        const personalContext = await this.getPersonalContext.get(credential.personId);
+        const personalContext = await this.getPersonalContext.get(
+            credential.personId,
+        );
 
-        if(!personalContext) {
+        if (!personalContext) {
             throw new Error('Authenticated person has no personal context');
         }
 
@@ -72,9 +88,7 @@ export class LoginHandler {
         const { token, tokenHash } = this.sessionTokenGenerator.generate();
 
         const now = new Date();
-        const expiresAt = new Date(
-            now.getTime() + sessionTtlSecond * 1000,
-        )
+        const expiresAt = new Date(now.getTime() + sessionTtlSecond * 1000);
 
         await this.sessionRepository.save({
             id: randomUUID(),

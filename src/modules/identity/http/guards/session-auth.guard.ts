@@ -24,7 +24,7 @@ export class SessionAuthGuard implements CanActivate {
             [context.getHandler(), context.getClass()],
         );
 
-        if(isPublic) {
+        if (isPublic) {
             return true;
         }
 
@@ -32,9 +32,8 @@ export class SessionAuthGuard implements CanActivate {
             .switchToHttp()
             .getRequest<AuthenticatedRequest>();
 
-        const isProduction = 
-            this.configService.getOrThrow<string>('NODE_ENV') === 
-            'production';
+        const isProduction =
+            this.configService.getOrThrow<string>('NODE_ENV') === 'production';
 
         const cookieName = isProduction ? '__Host-session' : 'session';
         const sessionToken = request.cookies?.[cookieName];

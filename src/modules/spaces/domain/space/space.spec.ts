@@ -18,9 +18,11 @@ describe('Space', () => {
     });
 
     it.each([null, undefined])('rejeita titular ausente: %s', (owner) => {
-        expect(() => Space.createPersonal(
-            SpaceId.create(),
-            owner as unknown as PersonId,
-        )).toThrow('Personal space requires an owner');
+        expect(() =>
+            Space.createPersonal(
+                SpaceId.create(),
+                owner as unknown as PersonId,
+            ),
+        ).toThrow('Personal space requires an owner');
     });
 });

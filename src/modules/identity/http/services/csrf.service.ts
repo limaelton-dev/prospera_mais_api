@@ -1,8 +1,8 @@
-import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { doubleCsrf, type DoubleCsrfUtilities } from 'csrf-csrf';
-import { CookieOptions, Request, RequestHandler, Response } from "express";
-import { randomBytes } from "node:crypto";
+import { CookieOptions, Request, RequestHandler, Response } from 'express';
+import { randomBytes } from 'node:crypto';
 
 @Injectable()
 export class CsrfService {
@@ -15,7 +15,7 @@ export class CsrfService {
     constructor(configService: ConfigService) {
         const isProduction =
             configService.getOrThrow<string>('NODE_ENV') === 'production';
-        
+
         const secret = configService.getOrThrow<string>('CSRF_SECRET');
 
         this.sessionCookieName = isProduction ? '__Host-session' : 'session';
@@ -23,13 +23,13 @@ export class CsrfService {
         this.contextCookieName = isProduction
             ? '__Host-csrf-context'
             : 'csrf-context';
-        
+
         this.tokenCookieName = isProduction ? '__Host-csrf' : 'csrf';
 
         this.cookieOptions = {
             httpOnly: true,
             secure: isProduction,
-            sameSite: "lax",
+            sameSite: 'lax',
             path: '/',
         };
 
@@ -64,7 +64,7 @@ export class CsrfService {
         const sessionToken = this.readCookie(request, this.sessionCookieName);
         const contextId = this.readCookie(request, this.contextCookieName);
 
-        if(!sessionToken && !contextId) {
+        if (!sessionToken && !contextId) {
             const newContextId = randomBytes(32).toString('base64url');
 
             response.cookie(
@@ -76,7 +76,7 @@ export class CsrfService {
             request.cookies[this.contextCookieName] = newContextId;
         }
 
-        if(typeof request.cookies[this.tokenCookieName] !== 'string') {
+        if (typeof request.cookies[this.tokenCookieName] !== 'string') {
             delete request.cookies[this.tokenCookieName];
         }
 
@@ -86,22 +86,22 @@ export class CsrfService {
     private getSessionIdentifier(request: Request): string {
         const sessionToken = this.readCookie(request, this.sessionCookieName);
 
-        if(sessionToken) {
+        if (sessionToken) {
             return `session:${sessionToken}`;
         }
 
         const contextId = this.readCookie(request, this.contextCookieName);
 
-        if(!contextId) {
+        if (!contextId) {
             throw this.csrf.invalidCsrfTokenError;
         }
 
         return `anonymous:${contextId}`;
     }
-    
+
     private readCookie(request: Request, name: string): string | undefined {
         const value: unknown = request.cookies?.[name];
-        return typeof value === 'string' && value.length > 0 
+        return typeof value === 'string' && value.length > 0
             ? value
             : undefined;
     }

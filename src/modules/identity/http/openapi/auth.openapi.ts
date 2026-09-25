@@ -53,11 +53,13 @@ function successResponse(
     return {
         description,
         headers,
-        ...(schemaName ? {
-            content: {
-                'application/json': { schema: schemaRef(schemaName) },
-            },
-        } : {}),
+        ...(schemaName
+            ? {
+                  content: {
+                      'application/json': { schema: schemaRef(schemaName) },
+                  },
+              }
+            : {}),
     };
 }
 
@@ -121,7 +123,11 @@ export function createAuthOpenApiDocument(
                     description: 'Limite: 60 requisições por minuto por IP.',
                     security: [],
                     responses: {
-                        200: successResponse('Token CSRF emitido.', 'CsrfTokenResponse', true),
+                        200: successResponse(
+                            'Token CSRF emitido.',
+                            'CsrfTokenResponse',
+                            true,
+                        ),
                         429: responseRef('TooManyRequests'),
                         default: responseRef('UnexpectedError'),
                     },
@@ -138,11 +144,17 @@ export function createAuthOpenApiDocument(
                     requestBody: {
                         required: true,
                         content: {
-                            'application/json': { schema: schemaRef('RegisterAccountRequest') },
+                            'application/json': {
+                                schema: schemaRef('RegisterAccountRequest'),
+                            },
                         },
                     },
                     responses: {
-                        201: successResponse('Conta criada.', 'AuthenticatedContext', true),
+                        201: successResponse(
+                            'Conta criada.',
+                            'AuthenticatedContext',
+                            true,
+                        ),
                         400: responseRef('ValidationError'),
                         403: responseRef('CsrfError'),
                         409: responseRef('EmailAlreadyInUse'),
@@ -162,11 +174,17 @@ export function createAuthOpenApiDocument(
                     requestBody: {
                         required: true,
                         content: {
-                            'application/json': { schema: schemaRef('LoginRequest') },
+                            'application/json': {
+                                schema: schemaRef('LoginRequest'),
+                            },
                         },
                     },
                     responses: {
-                        200: successResponse('Sessão criada.', 'AuthenticatedContext', true),
+                        200: successResponse(
+                            'Sessão criada.',
+                            'AuthenticatedContext',
+                            true,
+                        ),
                         400: responseRef('ValidationError'),
                         401: responseRef('InvalidCredentials'),
                         403: responseRef('CsrfError'),
@@ -182,7 +200,10 @@ export function createAuthOpenApiDocument(
                     summary: 'Consultar pessoa e espaço da sessão atual',
                     security: [{ sessionCookie: [] }],
                     responses: {
-                        200: successResponse('Contexto atual.', 'AuthenticatedContext'),
+                        200: successResponse(
+                            'Contexto atual.',
+                            'AuthenticatedContext',
+                        ),
                         401: responseRef('Unauthenticated'),
                         default: responseRef('UnexpectedError'),
                     },
@@ -196,7 +217,11 @@ export function createAuthOpenApiDocument(
                     security: [{ sessionCookie: [] }],
                     parameters: [csrfHeader],
                     responses: {
-                        204: successResponse('Sessão revogada e cookie removido.', undefined, true),
+                        204: successResponse(
+                            'Sessão revogada e cookie removido.',
+                            undefined,
+                            true,
+                        ),
                         401: responseRef('Unauthenticated'),
                         403: responseRef('CsrfError'),
                         default: responseRef('UnexpectedError'),
@@ -210,7 +235,8 @@ export function createAuthOpenApiDocument(
                     type: 'apiKey',
                     in: 'cookie',
                     name: isProduction ? '__Host-session' : 'session',
-                    description: 'Cookie HttpOnly definido pelo cadastro ou login.',
+                    description:
+                        'Cookie HttpOnly definido pelo cadastro ou login.',
                 },
             },
             parameters: {
@@ -218,7 +244,8 @@ export function createAuthOpenApiDocument(
                     name: 'X-CSRF-Token',
                     in: 'header',
                     required: true,
-                    description: 'Token obtido em GET /v2/auth/csrf, acompanhado dos cookies correspondentes.',
+                    description:
+                        'Token obtido em GET /v2/auth/csrf, acompanhado dos cookies correspondentes.',
                     schema: { type: 'string', minLength: 1 },
                 },
             },
@@ -234,7 +261,11 @@ export function createAuthOpenApiDocument(
                     additionalProperties: false,
                     required: ['displayName', 'email', 'password'],
                     properties: {
-                        displayName: { type: 'string', minLength: 2, maxLength: 80 },
+                        displayName: {
+                            type: 'string',
+                            minLength: 2,
+                            maxLength: 80,
+                        },
                         email,
                         password,
                     },
@@ -294,7 +325,10 @@ export function createAuthOpenApiDocument(
                             type: 'object',
                             additionalProperties: true,
                             properties: {
-                                fields: { type: 'array', items: schemaRef('FieldError') },
+                                fields: {
+                                    type: 'array',
+                                    items: schemaRef('FieldError'),
+                                },
                             },
                         },
                     },
@@ -305,9 +339,17 @@ export function createAuthOpenApiDocument(
                     ...errorResponse(
                         'VALIDATION_ERROR',
                         'Verifique os dados informados.',
-                        { fields: [{ field: 'email', messages: ['email must be an email'] }] },
+                        {
+                            fields: [
+                                {
+                                    field: 'email',
+                                    messages: ['email must be an email'],
+                                },
+                            ],
+                        },
                     ),
-                    description: 'Dados inválidos: VALIDATION_ERROR. JSON malformado: HTTP_ERROR.',
+                    description:
+                        'Dados inválidos: VALIDATION_ERROR. JSON malformado: HTTP_ERROR.',
                 },
                 InvalidCredentials: errorResponse(
                     'INVALID_CREDENTIALS',
@@ -327,7 +369,8 @@ export function createAuthOpenApiDocument(
                 ),
                 TooManyRequests: tooManyRequests,
                 UnexpectedError: {
-                    description: 'Demais erros: HTTP_ERROR em 4xx; INTERNAL_ERROR em 5xx.',
+                    description:
+                        'Demais erros: HTTP_ERROR em 4xx; INTERNAL_ERROR em 5xx.',
                     headers: { 'Cache-Control': noStore },
                     content: {
                         'application/json': {
@@ -336,14 +379,16 @@ export function createAuthOpenApiDocument(
                                 http: {
                                     value: {
                                         code: 'HTTP_ERROR',
-                                        message: 'Não foi possível processar esta solicitação.',
+                                        message:
+                                            'Não foi possível processar esta solicitação.',
                                         details: {},
                                     },
                                 },
                                 internal: {
                                     value: {
                                         code: 'INTERNAL_ERROR',
-                                        message: 'Ocorreu um erro interno. Tente novamente mais tarde.',
+                                        message:
+                                            'Ocorreu um erro interno. Tente novamente mais tarde.',
                                         details: {},
                                     },
                                 },

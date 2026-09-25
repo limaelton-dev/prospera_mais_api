@@ -31,9 +31,7 @@ function createTestContext() {
 
     const sessionTokenGenerator = {
         generate: vi.fn<SessionTokenGenerator['generate']>(),
-        hash: vi
-            .fn<SessionTokenGenerator['hash']>()
-            .mockReturnValue(tokenHash),
+        hash: vi.fn<SessionTokenGenerator['hash']>().mockReturnValue(tokenHash),
     } satisfies SessionTokenGenerator;
 
     const service = new SessionService(
@@ -71,11 +69,13 @@ describe('SessionService', () => {
             sessionId: context.session.id,
         });
 
-        expect(context.sessionTokenGenerator.hash)
-            .toHaveBeenCalledWith(context.token);
+        expect(context.sessionTokenGenerator.hash).toHaveBeenCalledWith(
+            context.token,
+        );
 
-        expect(context.sessionRepository.findByTokenHash)
-            .toHaveBeenCalledWith(context.tokenHash);
+        expect(context.sessionRepository.findByTokenHash).toHaveBeenCalledWith(
+            context.tokenHash,
+        );
 
         expect(context.session.expiresAt.getTime()).toBe(expiresAt);
         expect(context.sessionRepository.save).not.toHaveBeenCalled();
@@ -89,17 +89,21 @@ describe('SessionService', () => {
         { label: 'numérico', token: 123 },
         { label: 'objeto', token: {} },
         { label: 'array', token: [] },
-    ])('rejeita token $label antes de consultar o repositório', async ({ token }) => {
-        const context = createTestContext();
+    ])(
+        'rejeita token $label antes de consultar o repositório',
+        async ({ token }) => {
+            const context = createTestContext();
 
-        await expect(
-            context.service.authenticate(token),
-        ).rejects.toBeInstanceOf(UnauthenticatedError);
+            await expect(
+                context.service.authenticate(token),
+            ).rejects.toBeInstanceOf(UnauthenticatedError);
 
-        expect(context.sessionTokenGenerator.hash).not.toHaveBeenCalled();
-        expect(context.sessionRepository.findByTokenHash)
-            .not.toHaveBeenCalled();
-    });
+            expect(context.sessionTokenGenerator.hash).not.toHaveBeenCalled();
+            expect(
+                context.sessionRepository.findByTokenHash,
+            ).not.toHaveBeenCalled();
+        },
+    );
 
     it('preserva o token exatamente como recebido', async () => {
         const context = createTestContext();
@@ -107,8 +111,7 @@ describe('SessionService', () => {
 
         await context.service.authenticate(token);
 
-        expect(context.sessionTokenGenerator.hash)
-            .toHaveBeenCalledWith(token);
+        expect(context.sessionTokenGenerator.hash).toHaveBeenCalledWith(token);
     });
 
     it('rejeita token sem sessão correspondente', async () => {
@@ -144,12 +147,13 @@ describe('SessionService', () => {
             throw error;
         });
 
-        await expect(
-            context.service.authenticate(context.token),
-        ).rejects.toBe(error);
+        await expect(context.service.authenticate(context.token)).rejects.toBe(
+            error,
+        );
 
-        expect(context.sessionRepository.findByTokenHash)
-            .not.toHaveBeenCalled();
+        expect(
+            context.sessionRepository.findByTokenHash,
+        ).not.toHaveBeenCalled();
     });
 
     it('propaga falha do repositório sem convertê-la em sessão inválida', async () => {
@@ -158,8 +162,8 @@ describe('SessionService', () => {
 
         context.sessionRepository.findByTokenHash.mockRejectedValue(error);
 
-        await expect(
-            context.service.authenticate(context.token),
-        ).rejects.toBe(error);
+        await expect(context.service.authenticate(context.token)).rejects.toBe(
+            error,
+        );
     });
 });

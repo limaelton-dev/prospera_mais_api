@@ -1,6 +1,6 @@
-import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { CookieOptions, Response } from "express";
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { CookieOptions, Response } from 'express';
 
 @Injectable()
 export class SessionCookieService {
@@ -11,10 +11,11 @@ export class SessionCookieService {
     constructor(configService: ConfigService) {
         const isProduction =
             configService.getOrThrow<string>('NODE_ENV') === 'production';
-        
-        const sessionTtlSeconds =
-            configService.getOrThrow<number>('SESSION_TTL_SECONDS');
-        
+
+        const sessionTtlSeconds = configService.getOrThrow<number>(
+            'SESSION_TTL_SECONDS',
+        );
+
         this.cookieName = isProduction ? '__Host-session' : 'session';
 
         this.cookieOptions = {

@@ -16,7 +16,7 @@ export function configureApp(app: INestApplication): void {
 
     app.setGlobalPrefix('v2');
 
-    if(isProduction) {
+    if (isProduction) {
         app.getHttpAdapter().getInstance().set('trust proxy', 1);
     }
 
@@ -30,13 +30,15 @@ export function configureApp(app: INestApplication): void {
 
     app.use(csrf.protection);
 
-    app.useGlobalPipes(new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-        validationError: { target: false, value: false },
-        exceptionFactory: createValidationException,
-    }));
+    app.useGlobalPipes(
+        new ValidationPipe({
+            whitelist: true,
+            forbidNonWhitelisted: true,
+            transform: true,
+            validationError: { target: false, value: false },
+            exceptionFactory: createValidationException,
+        }),
+    );
 
     SwaggerModule.setup('docs', app, createAuthOpenApiDocument(isProduction), {
         useGlobalPrefix: true,

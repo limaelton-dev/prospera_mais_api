@@ -5,7 +5,15 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import request from 'supertest';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+    afterEach,
+    beforeAll,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
+} from 'vitest';
 
 import { TEST_DATABASE_URL } from './setup-env.js';
 import { AppModule } from '../dist/app.module.js';
@@ -25,13 +33,22 @@ const account = {
     password: 'uma-senha-de-teste',
 };
 
-const tables = ['persons', 'spaces', 'auth_credentials', 'auth_sessions'] as const;
+const tables = [
+    'persons',
+    'spaces',
+    'auth_credentials',
+    'auth_sessions',
+] as const;
 
 function assertTestDatabase(source: DataSource): void {
-    if (process.env.NODE_ENV !== 'test' ||
+    if (
+        process.env.NODE_ENV !== 'test' ||
         source.options.type !== 'postgres' ||
-        source.options.url !== TEST_DATABASE_URL) {
-        throw new Error('Operação permitida somente no PostgreSQL isolado de testes.');
+        source.options.url !== TEST_DATABASE_URL
+    ) {
+        throw new Error(
+            'Operação permitida somente no PostgreSQL isolado de testes.',
+        );
     }
 }
 
@@ -46,8 +63,9 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
 
         try {
             await migrationDataSource.dropDatabase();
-            migrations = (await migrationDataSource.runMigrations())
-                .map((migration) => migration.name);
+            migrations = (await migrationDataSource.runMigrations()).map(
+                (migration) => migration.name,
+            );
         } finally {
             await migrationDataSource.destroy();
         }
@@ -76,20 +94,25 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
     });
 
     async function counts(): Promise<number[]> {
-        return Promise.all(tables.map(async (table) => {
-            const rows: { total: number }[] = await db.query(
-                `SELECT count(*)::int AS total FROM "${table}"`,
-            );
-            return rows[0].total;
-        }));
+        return Promise.all(
+            tables.map(async (table) => {
+                const rows: { total: number }[] = await db.query(
+                    `SELECT count(*)::int AS total FROM "${table}"`,
+                );
+                return rows[0].total;
+            }),
+        );
     }
 
     function register(email = account.email) {
         return app.get(RegisterAccountHandler).execute({ ...account, email });
     }
 
-    async function csrf(agent: ReturnType<typeof request.agent>): Promise<string> {
-        const response = await agent.get('/v2/auth/csrf')
+    async function csrf(
+        agent: ReturnType<typeof request.agent>,
+    ): Promise<string> {
+        const response = await agent
+            .get('/v2/auth/csrf')
             .expect(200)
             .expect('Cache-Control', 'no-store');
 
@@ -117,7 +140,9 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
         const credentials = app.get(TypeOrmCredentialRepository);
         const credential = await credentials.findByEmail(account.email);
         const hash = createHash('sha256').update(result.sessionToken).digest();
-        const session = await app.get(TypeOrmSessionRepository).findByTokenHash(hash);
+        const session = await app
+            .get(TypeOrmSessionRepository)
+            .findByTokenHash(hash);
 
         expect(await counts()).toEqual([1, 1, 1, 1]);
         expect(result.context.person.displayName).toBe('Elton Lima');
@@ -125,8 +150,9 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
         expect(credential?.passwordHash).not.toBe(account.password);
         expect(session?.personId.value).toBe(result.context.person.id);
         expect(session?.tokenHash).toEqual(hash);
-        expect(session!.expiresAt.getTime() - session!.createdAt.getTime())
-            .toBe(604800000);
+        expect(
+            session!.expiresAt.getTime() - session!.createdAt.getTime(),
+        ).toBe(604800000);
     });
 
     it('o banco impede e-mail duplicado e o repository traduz o conflito', async () => {
@@ -135,10 +161,12 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
         const repository = app.get(TypeOrmCredentialRepository);
         const credential = await repository.findByEmail(account.email);
 
-        await expect(repository.save({
-            ...credential!,
-            personId: PersonId.from(second.context.person.id),
-        })).rejects.toBeInstanceOf(EmailAlreadyInUseError);
+        await expect(
+            repository.save({
+                ...credential!,
+                personId: PersonId.from(second.context.person.id),
+            }),
+        ).rejects.toBeInstanceOf(EmailAlreadyInUseError);
     });
 
     it('o banco impede dois espaços pessoais para o mesmo titular', async () => {
@@ -148,13 +176,14 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
             id: result.context.personalSpace.id,
         });
 
-        await expect(repository.insert({ ...space, id: randomUUID() }))
-            .rejects.toMatchObject({
-                driverError: {
-                    code: '23505',
-                    constraint: 'UQ_spaces_personal_owner',
-                },
-            });
+        await expect(
+            repository.insert({ ...space, id: randomUUID() }),
+        ).rejects.toMatchObject({
+            driverError: {
+                code: '23505',
+                constraint: 'UQ_spaces_personal_owner',
+            },
+        });
     });
 
     it('o banco impede hashes de sessão duplicados', async () => {
@@ -164,13 +193,14 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
             personId: result.context.person.id,
         });
 
-        await expect(repository.insert({ ...session, id: randomUUID() }))
-            .rejects.toMatchObject({
-                driverError: {
-                    code: '23505',
-                    constraint: 'UQ_auth_sessions_token_hash',
-                },
-            });
+        await expect(
+            repository.insert({ ...session, id: randomUUID() }),
+        ).rejects.toMatchObject({
+            driverError: {
+                code: '23505',
+                constraint: 'UQ_auth_sessions_token_hash',
+            },
+        });
     });
 
     it('desfaz os quatro registros quando o cadastro falha antes do commit', async () => {
@@ -195,10 +225,12 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
         expect(await repository.findByTokenHash(hash)).not.toBeNull();
         expect(await repository.findByTokenHash(Buffer.alloc(32))).toBeNull();
 
-        await db.getRepository(AuthSessionOrmEntity).update(
-            { personId: result.context.person.id },
-            { expiresAt: new Date(0) },
-        );
+        await db
+            .getRepository(AuthSessionOrmEntity)
+            .update(
+                { personId: result.context.person.id },
+                { expiresAt: new Date(0) },
+            );
 
         expect(await repository.findByTokenHash(hash)).toBeNull();
 
@@ -217,7 +249,9 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
 
         expect(response.body.csrfToken).toEqual(expect.any(String));
         const cookies: string[] = response.get('Set-Cookie') ?? [];
-        expect(cookies.some((cookie) => cookie.startsWith('csrf-context='))).toBe(true);
+        expect(
+            cookies.some((cookie) => cookie.startsWith('csrf-context=')),
+        ).toBe(true);
         expect(cookies.some((cookie) => cookie.startsWith('csrf='))).toBe(true);
 
         for (const cookie of cookies) {
@@ -252,7 +286,8 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
         const firstToken = await csrf(first);
         await csrf(second);
 
-        await second.post('/v2/auth/register')
+        await second
+            .post('/v2/auth/register')
             .set('X-CSRF-Token', firstToken)
             .send(account)
             .expect(403);
@@ -264,16 +299,20 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
             const call = request(app.getHttpServer()).get('/v2/auth/me');
             if (cookie) call.set('Cookie', cookie);
 
-            await call.expect(401)
+            await call
+                .expect(401)
                 .expect('Cache-Control', 'no-store')
-                .expect(({ body }) => expect(body.code).toBe('UNAUTHENTICATED'));
+                .expect(({ body }) =>
+                    expect(body.code).toBe('UNAUTHENTICATED'),
+                );
         },
     );
 
     it('cadastra, restaura contexto, faz login e revoga só a sessão atual', async () => {
         const first = request.agent(app.getHttpServer());
         const anonymousToken = await csrf(first);
-        const created = await first.post('/v2/auth/register')
+        const created = await first
+            .post('/v2/auth/register')
             .set('X-CSRF-Token', anonymousToken)
             .send(account)
             .expect(201)
@@ -307,23 +346,27 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
 
         const second = request.agent(app.getHttpServer());
         const loginToken = await csrf(second);
-        const loggedIn = await second.post('/v2/auth/login')
+        const loggedIn = await second
+            .post('/v2/auth/login')
             .set('X-CSRF-Token', loginToken)
             .send({ email: account.email, password: account.password })
             .expect(200)
             .expect(created.body);
 
-        expect(sessionCookie(loggedIn).split(';')[0])
-            .not.toBe(cookie.split(';')[0]);
+        expect(sessionCookie(loggedIn).split(';')[0]).not.toBe(
+            cookie.split(';')[0],
+        );
 
         expect(await counts()).toEqual([1, 1, 1, 2]);
 
-        await first.post('/v2/auth/logout')
+        await first
+            .post('/v2/auth/logout')
             .set('X-CSRF-Token', anonymousToken)
             .expect(403);
 
         const logoutToken = await csrf(first);
-        const loggedOut = await first.post('/v2/auth/logout')
+        const loggedOut = await first
+            .post('/v2/auth/logout')
             .set('X-CSRF-Token', logoutToken)
             .expect(204)
             .expect('Cache-Control', 'no-store');
@@ -350,7 +393,8 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
             const agent = request.agent(app.getHttpServer());
             const token = await csrf(agent);
 
-            await agent.post('/v2/auth/login')
+            await agent
+                .post('/v2/auth/login')
                 .set('X-CSRF-Token', token)
                 .send({ email, password: 'senha-incorreta' })
                 .expect(401)
@@ -370,16 +414,17 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
     ])('rejeita payload inválido no campo %s', async (field, payload) => {
         const agent = request.agent(app.getHttpServer());
         const token = await csrf(agent);
-        const response = await agent.post('/v2/auth/register')
+        const response = await agent
+            .post('/v2/auth/register')
             .set('X-CSRF-Token', token)
             .send(payload)
             .expect(400);
 
         expect(response.body.code).toBe('VALIDATION_ERROR');
 
-        expect(response.body.details.fields).toEqual(expect.arrayContaining([
-            expect.objectContaining({ field }),
-        ]));
+        expect(response.body.details.fields).toEqual(
+            expect.arrayContaining([expect.objectContaining({ field })]),
+        );
 
         expect(JSON.stringify(response.body)).not.toContain('segredo-extra');
         expect(JSON.stringify(response.body)).not.toContain(account.password);
@@ -394,17 +439,22 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
 
         const tokens = await Promise.all(agents.map(csrf));
 
-        const responses = await Promise.all(agents.map((agent, index) =>
-            agent.post('/v2/auth/register')
-                .set('X-CSRF-Token', tokens[index])
-                .send(account),
-        ));
+        const responses = await Promise.all(
+            agents.map((agent, index) =>
+                agent
+                    .post('/v2/auth/register')
+                    .set('X-CSRF-Token', tokens[index])
+                    .send(account),
+            ),
+        );
 
-        expect(responses.map((response) => response.status).sort())
-            .toEqual([201, 409]);
+        expect(responses.map((response) => response.status).sort()).toEqual([
+            201, 409,
+        ]);
 
-        expect(responses.find((response) => response.status === 409)?.body.code)
-            .toBe('EMAIL_ALREADY_IN_USE');
+        expect(
+            responses.find((response) => response.status === 409)?.body.code,
+        ).toBe('EMAIL_ALREADY_IN_USE');
 
         expect(await counts()).toEqual([1, 1, 1, 1]);
     });
@@ -417,11 +467,13 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
         const agent = request.agent(app.getHttpServer());
         const token = operation === 'csrf' ? '' : await csrf(agent);
 
-        const call = () => operation === 'csrf'
-            ? agent.get('/v2/auth/csrf')
-            : agent.post(`/v2/auth/${operation}`)
-                .set('X-CSRF-Token', token)
-                .send({});
+        const call = () =>
+            operation === 'csrf'
+                ? agent.get('/v2/auth/csrf')
+                : agent
+                      .post(`/v2/auth/${operation}`)
+                      .set('X-CSRF-Token', token)
+                      .send({});
 
         for (let attempt = 0; attempt < limit; attempt++) {
             await call().expect(operation === 'csrf' ? 200 : 400);
@@ -459,7 +511,9 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
         expect(response.body.openapi).toBe('3.1.0');
         expect(Object.keys(response.body.paths)).toHaveLength(5);
 
-        expect(response.body.components.schemas.RegisterAccountRequest
-            .properties.password.minLength).toBe(6);
+        expect(
+            response.body.components.schemas.RegisterAccountRequest.properties
+                .password.minLength,
+        ).toBe(6);
     });
 });

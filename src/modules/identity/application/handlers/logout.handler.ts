@@ -1,5 +1,8 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { SESSION_REPOSITORY, type SessionRepository } from "../ports/private/session.repository.js";
+import { Inject, Injectable } from '@nestjs/common';
+import {
+    SESSION_REPOSITORY,
+    type SessionRepository,
+} from '../ports/private/session.repository.js';
 
 @Injectable()
 export class LogoutHandler {

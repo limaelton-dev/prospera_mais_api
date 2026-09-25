@@ -29,7 +29,7 @@ export class Space {
         if (!ownerPersonId) {
             throw new Error('Personal space requires an owner');
         }
-        
+
         return new Space({
             id,
             type: SpaceType.PERSONAL,

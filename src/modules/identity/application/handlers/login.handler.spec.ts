@@ -57,9 +57,7 @@ function createTestContext() {
 
     const passwordHasher = {
         hash: vi.fn<PasswordHasher['hash']>(),
-        verify: vi
-            .fn<PasswordHasher['verify']>()
-            .mockResolvedValue(true),
+        verify: vi.fn<PasswordHasher['verify']>().mockResolvedValue(true),
     } satisfies PasswordHasher;
 
     const getPersonalContext = {
@@ -69,9 +67,7 @@ function createTestContext() {
     } satisfies GetPersonalContext;
 
     const sessionRepository = {
-        save: vi
-            .fn<SessionRepository['save']>()
-            .mockResolvedValue(undefined),
+        save: vi.fn<SessionRepository['save']>().mockResolvedValue(undefined),
         findByTokenHash: vi.fn<SessionRepository['findByTokenHash']>(),
         deleteById: vi.fn<SessionRepository['deleteById']>(),
     } satisfies SessionRepository;
@@ -119,17 +115,16 @@ describe('LoginHandler', () => {
 
         const execution = context.handler.execute(context.input);
 
-        await expect(execution).rejects.toBeInstanceOf(
-            InvalidCredentialsError,
-        );
+        await expect(execution).rejects.toBeInstanceOf(InvalidCredentialsError);
 
         await expect(execution).rejects.toMatchObject({
             code: 'INVALID_CREDENTIALS',
             message: 'E-mail ou senha inválidos.',
         });
 
-        expect(context.credentialRepository.findByEmail)
-            .toHaveBeenCalledWith('elton@example.com');
+        expect(context.credentialRepository.findByEmail).toHaveBeenCalledWith(
+            'elton@example.com',
+        );
 
         expect(context.passwordHasher.verify).not.toHaveBeenCalled();
         expect(context.getPersonalContext.get).not.toHaveBeenCalled();
@@ -144,9 +139,7 @@ describe('LoginHandler', () => {
 
         const execution = context.handler.execute(context.input);
 
-        await expect(execution).rejects.toBeInstanceOf(
-            InvalidCredentialsError,
-        );
+        await expect(execution).rejects.toBeInstanceOf(InvalidCredentialsError);
 
         await expect(execution).rejects.toMatchObject({
             code: 'INVALID_CREDENTIALS',
@@ -168,8 +161,9 @@ describe('LoginHandler', () => {
 
         const result = await context.handler.execute(context.input);
 
-        expect(context.credentialRepository.findByEmail)
-            .toHaveBeenCalledWith('elton@example.com');
+        expect(context.credentialRepository.findByEmail).toHaveBeenCalledWith(
+            'elton@example.com',
+        );
 
         expect(context.passwordHasher.verify).toHaveBeenCalledWith(
             context.input.password,
@@ -180,13 +174,11 @@ describe('LoginHandler', () => {
             context.credential.personId,
         );
 
-        expect(context.sessionTokenGenerator.generate)
-            .toHaveBeenCalledTimes(1);
+        expect(context.sessionTokenGenerator.generate).toHaveBeenCalledTimes(1);
 
         expect(context.sessionRepository.save).toHaveBeenCalledTimes(1);
 
-        const savedSession =
-            context.sessionRepository.save.mock.calls[0][0];
+        const savedSession = context.sessionRepository.save.mock.calls[0][0];
 
         expect(savedSession).toEqual({
             id: expect.any(String),
@@ -225,9 +217,9 @@ describe('LoginHandler', () => {
 
         context.getPersonalContext.get.mockResolvedValue(null);
 
-        await expect(
-            context.handler.execute(context.input),
-        ).rejects.toThrow('Authenticated person has no personal context');
+        await expect(context.handler.execute(context.input)).rejects.toThrow(
+            'Authenticated person has no personal context',
+        );
 
         expect(context.sessionTokenGenerator.generate).not.toHaveBeenCalled();
         expect(context.sessionRepository.save).not.toHaveBeenCalled();
@@ -239,9 +231,9 @@ describe('LoginHandler', () => {
 
         context.credentialRepository.findByEmail.mockRejectedValue(error);
 
-        await expect(
-            context.handler.execute(context.input),
-        ).rejects.toBe(error);
+        await expect(context.handler.execute(context.input)).rejects.toBe(
+            error,
+        );
 
         expect(context.passwordHasher.verify).not.toHaveBeenCalled();
         expect(context.getPersonalContext.get).not.toHaveBeenCalled();
@@ -255,9 +247,9 @@ describe('LoginHandler', () => {
 
         context.passwordHasher.verify.mockRejectedValue(error);
 
-        await expect(
-            context.handler.execute(context.input),
-        ).rejects.toBe(error);
+        await expect(context.handler.execute(context.input)).rejects.toBe(
+            error,
+        );
 
         expect(context.getPersonalContext.get).not.toHaveBeenCalled();
         expect(context.sessionTokenGenerator.generate).not.toHaveBeenCalled();
@@ -270,9 +262,9 @@ describe('LoginHandler', () => {
 
         context.getPersonalContext.get.mockRejectedValue(error);
 
-        await expect(
-            context.handler.execute(context.input),
-        ).rejects.toBe(error);
+        await expect(context.handler.execute(context.input)).rejects.toBe(
+            error,
+        );
 
         expect(context.sessionTokenGenerator.generate).not.toHaveBeenCalled();
         expect(context.sessionRepository.save).not.toHaveBeenCalled();
@@ -284,9 +276,9 @@ describe('LoginHandler', () => {
 
         context.sessionRepository.save.mockRejectedValue(error);
 
-        await expect(
-            context.handler.execute(context.input),
-        ).rejects.toBe(error);
+        await expect(context.handler.execute(context.input)).rejects.toBe(
+            error,
+        );
 
         expect(context.sessionRepository.save).toHaveBeenCalledTimes(1);
     });

@@ -24,8 +24,9 @@ describe('LogoutHandler', () => {
             context.handler.execute('current-session-id'),
         ).resolves.toBeUndefined();
 
-        expect(context.sessionRepository.deleteById)
-            .toHaveBeenCalledExactlyOnceWith('current-session-id');
+        expect(
+            context.sessionRepository.deleteById,
+        ).toHaveBeenCalledExactlyOnceWith('current-session-id');
     });
 
     it('propaga a falha ao revogar a sessão', async () => {

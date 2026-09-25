@@ -18,10 +18,7 @@ class TestController {
 
 type ParameterMetadata = {
     data: unknown;
-    factory: (
-        data: unknown,
-        context: ExecutionContext,
-    ) => AuthenticatedActor;
+    factory: (data: unknown, context: ExecutionContext) => AuthenticatedActor;
 };
 
 function extractActor(request: Pick<AuthenticatedRequest, 'actor'>) {
@@ -53,7 +50,6 @@ describe('CurrentActor', () => {
     });
 
     it('rejeita a requisição quando não existe ator autenticado', () => {
-        expect(() => extractActor({}))
-            .toThrow(UnauthenticatedError);
+        expect(() => extractActor({})).toThrow(UnauthenticatedError);
     });
 });

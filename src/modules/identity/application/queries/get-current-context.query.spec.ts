@@ -79,8 +79,9 @@ describe('GetCurrentContextQuery', () => {
             context.credentialRepository.findByPersonId,
         ).toHaveBeenCalledExactlyOnceWith(context.personId);
 
-        expect(context.getPersonalContext.get)
-            .toHaveBeenCalledExactlyOnceWith(context.personId);
+        expect(context.getPersonalContext.get).toHaveBeenCalledExactlyOnceWith(
+            context.personId,
+        );
     });
 
     it('rejeita quando a credencial da pessoa não existe', async () => {
@@ -115,9 +116,9 @@ describe('GetCurrentContextQuery', () => {
 
         context.credentialRepository.findByPersonId.mockRejectedValue(error);
 
-        await expect(
-            context.query.execute(context.personId),
-        ).rejects.toBe(error);
+        await expect(context.query.execute(context.personId)).rejects.toBe(
+            error,
+        );
 
         expect(context.getPersonalContext.get).not.toHaveBeenCalled();
     });
@@ -128,8 +129,8 @@ describe('GetCurrentContextQuery', () => {
 
         context.getPersonalContext.get.mockRejectedValue(error);
 
-        await expect(
-            context.query.execute(context.personId),
-        ).rejects.toBe(error);
+        await expect(context.query.execute(context.personId)).rejects.toBe(
+            error,
+        );
     });
 });

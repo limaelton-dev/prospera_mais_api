@@ -79,16 +79,19 @@ describe('SessionAuthGuard e Public', () => {
         { environment: 'development', token: 'local-token' },
         { environment: 'test', token: 'local-token' },
         { environment: 'production', token: 'production-token' },
-    ])('autentica com o cookie correto em $environment', async ({ environment, token }) => {
-        const context = createTestContext(environment);
+    ])(
+        'autentica com o cookie correto em $environment',
+        async ({ environment, token }) => {
+            const context = createTestContext(environment);
 
-        await expect(
-            context.guard.canActivate(context.executionContext),
-        ).resolves.toBe(true);
+            await expect(
+                context.guard.canActivate(context.executionContext),
+            ).resolves.toBe(true);
 
-        expect(context.authenticate).toHaveBeenCalledExactlyOnceWith(token);
-        expect(context.request.actor).toBe(context.actor);
-    });
+            expect(context.authenticate).toHaveBeenCalledExactlyOnceWith(token);
+            expect(context.request.actor).toBe(context.actor);
+        },
+    );
 
     it('libera um método público sem autenticar a sessão', async () => {
         const context = createTestContext();
@@ -98,9 +101,9 @@ describe('SessionAuthGuard e Public', () => {
             TestController.prototype.publicRoute,
         );
 
-        await expect(
-            context.guard.canActivate(executionContext),
-        ).resolves.toBe(true);
+        await expect(context.guard.canActivate(executionContext)).resolves.toBe(
+            true,
+        );
 
         expect(context.authenticate).not.toHaveBeenCalled();
         expect(context.request.actor).toBeUndefined();
@@ -114,9 +117,9 @@ describe('SessionAuthGuard e Public', () => {
             PublicController.prototype.route,
         );
 
-        await expect(
-            context.guard.canActivate(executionContext),
-        ).resolves.toBe(true);
+        await expect(context.guard.canActivate(executionContext)).resolves.toBe(
+            true,
+        );
 
         expect(context.authenticate).not.toHaveBeenCalled();
         expect(context.request.actor).toBeUndefined();

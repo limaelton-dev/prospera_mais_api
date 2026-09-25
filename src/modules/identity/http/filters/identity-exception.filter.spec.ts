@@ -62,7 +62,8 @@ describe('IdentityExceptionFilter', () => {
         expect(response.status).toHaveBeenCalledWith(403);
         expect(response.json).toHaveBeenCalledWith({
             code: 'INVALID_CSRF_TOKEN',
-            message: 'Não foi possível validar esta solicitação. Atualize a página e tente novamente.',
+            message:
+                'Não foi possível validar esta solicitação. Atualize a página e tente novamente.',
             details: {},
         });
     });
@@ -80,12 +81,14 @@ describe('IdentityExceptionFilter', () => {
     });
 
     it('preserva os detalhes seguros da validação', () => {
-        const error = createValidationException([{
-            property: 'email',
-            constraints: { isEmail: 'email must be an email' },
-            target: { password: 'segredo' },
-            value: 'entrada privada',
-        }]);
+        const error = createValidationException([
+            {
+                property: 'email',
+                constraints: { isEmail: 'email must be an email' },
+                target: { password: 'segredo' },
+                value: 'entrada privada',
+            },
+        ]);
         const { response } = execute(error);
 
         expect(response.status).toHaveBeenCalledWith(400);
@@ -93,10 +96,12 @@ describe('IdentityExceptionFilter', () => {
             code: 'VALIDATION_ERROR',
             message: 'Verifique os dados informados.',
             details: {
-                fields: [{
-                    field: 'email',
-                    messages: ['email must be an email'],
-                }],
+                fields: [
+                    {
+                        field: 'email',
+                        messages: ['email must be an email'],
+                    },
+                ],
             },
         });
     });
@@ -124,7 +129,9 @@ describe('IdentityExceptionFilter', () => {
         [Object.assign(new Error('status inválido'), { statusCode: 200 }), 500],
         [new HttpException('serviço privado', 503), 503],
     ] as const)('oculta detalhes de falhas internas: %s', (error, status) => {
-        const log = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+        const log = vi
+            .spyOn(Logger.prototype, 'error')
+            .mockImplementation(() => {});
         const { response, headers } = execute(error);
 
         expect(response.status).toHaveBeenCalledWith(status);

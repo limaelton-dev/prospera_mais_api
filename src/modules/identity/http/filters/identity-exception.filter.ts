@@ -101,19 +101,27 @@ export class IdentityExceptionFilter implements ExceptionFilter<unknown> {
     }
 
     private isCsrfError(exception: unknown): boolean {
-        return exception instanceof Error &&
+        return (
+            exception instanceof Error &&
             'code' in exception &&
             exception.code === 'INVALID_CSRF_TOKEN' &&
             'statusCode' in exception &&
-            exception.statusCode === 403;
+            exception.statusCode === 403
+        );
     }
 
     private isValidationBody(body: unknown): body is ErrorBody {
-        return typeof body === 'object' && body !== null &&
-            'code' in body && body.code === 'VALIDATION_ERROR' &&
-            'message' in body && typeof body.message === 'string' &&
+        return (
+            typeof body === 'object' &&
+            body !== null &&
+            'code' in body &&
+            body.code === 'VALIDATION_ERROR' &&
+            'message' in body &&
+            typeof body.message === 'string' &&
             'details' in body &&
-            typeof body.details === 'object' && body.details !== null;
+            typeof body.details === 'object' &&
+            body.details !== null
+        );
     }
 
     private getHttpStatus(exception: unknown): number {
@@ -124,8 +132,12 @@ export class IdentityExceptionFilter implements ExceptionFilter<unknown> {
         if (exception instanceof Error && 'statusCode' in exception) {
             const status = exception.statusCode;
 
-            if (typeof status === 'number' &&
-                Number.isInteger(status) && status >= 400 && status <= 599) {
+            if (
+                typeof status === 'number' &&
+                Number.isInteger(status) &&
+                status >= 400 &&
+                status <= 599
+            ) {
                 return status;
             }
         }
@@ -133,7 +145,11 @@ export class IdentityExceptionFilter implements ExceptionFilter<unknown> {
         return 500;
     }
 
-    private error(status: number, code: string, message: string): ErrorResponse {
+    private error(
+        status: number,
+        code: string,
+        message: string,
+    ): ErrorResponse {
         return { status, body: { code, message, details: {} } };
     }
 }

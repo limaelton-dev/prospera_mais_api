@@ -68,7 +68,10 @@ describe('CsrfService: geração e cookies', () => {
 
     it('reutiliza o contexto e o token válidos', () => {
         const first = createContext();
-        const token = first.service.generateToken(first.request, first.response);
+        const token = first.service.generateToken(
+            first.request,
+            first.response,
+        );
         const contextId = first.cookies['csrf-context'];
 
         const second = createContext('test', {
@@ -187,11 +190,7 @@ describe('CsrfService: proteção das requisições', () => {
     function protect(context: ReturnType<typeof createContext>) {
         const next = vi.fn();
 
-        context.service.protection(
-            context.request,
-            context.response,
-            next,
-        );
+        context.service.protection(context.request, context.response, next);
 
         return next;
     }
@@ -203,16 +202,13 @@ describe('CsrfService: proteção das requisições', () => {
             'Não foi possível validar esta solicitação. Atualize a página e tente novamente.',
     });
 
-    it.each(['GET', 'HEAD', 'OPTIONS'])(
-        'libera %s sem token',
-        (method) => {
-            const context = createContext();
-            context.request.method = method;
-            context.request.headers = {};
+    it.each(['GET', 'HEAD', 'OPTIONS'])('libera %s sem token', (method) => {
+        const context = createContext();
+        context.request.method = method;
+        context.request.headers = {};
 
-            expect(protect(context)).toHaveBeenCalledExactlyOnceWith();
-        },
-    );
+        expect(protect(context)).toHaveBeenCalledExactlyOnceWith();
+    });
 
     it.each(['POST', 'PUT', 'PATCH', 'DELETE'])(
         'rejeita %s sem o header CSRF',
@@ -257,9 +253,7 @@ describe('CsrfService: proteção das requisições', () => {
             'x-csrf-token': value,
         });
 
-        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(
-            invalidCsrf,
-        );
+        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(invalidCsrf);
     });
 
     it('rejeita token no corpo ou na query sem o header', () => {
@@ -268,18 +262,14 @@ describe('CsrfService: proteção das requisições', () => {
         context.request.body = { csrfToken: context.token };
         context.request.query = { csrfToken: context.token };
 
-        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(
-            invalidCsrf,
-        );
+        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(invalidCsrf);
     });
 
     it('rejeita header válido sem o cookie CSRF', () => {
         const context = createProtectedContext();
         delete context.cookies.csrf;
 
-        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(
-            invalidCsrf,
-        );
+        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(invalidCsrf);
     });
 
     it('rejeita cookie e header iguais quando a assinatura foi adulterada', () => {
@@ -292,18 +282,14 @@ describe('CsrfService: proteção das requisições', () => {
         context.cookies.csrf = forgedToken;
         context.request.headers['x-csrf-token'] = forgedToken;
 
-        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(
-            invalidCsrf,
-        );
+        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(invalidCsrf);
     });
 
     it('rejeita token emitido para outro contexto anônimo', () => {
         const context = createProtectedContext();
         context.cookies['csrf-context'] = 'another-anonymous-context';
 
-        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(
-            invalidCsrf,
-        );
+        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(invalidCsrf);
     });
 
     it('lança o erro CSRF quando o identificador anônimo desaparece', () => {
@@ -341,9 +327,7 @@ describe('CsrfService: proteção das requisições', () => {
             context.cookies.session = after;
         }
 
-        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(
-            invalidCsrf,
-        );
+        expect(protect(context)).toHaveBeenCalledExactlyOnceWith(invalidCsrf);
 
         const newToken = context.service.generateToken(
             context.request,

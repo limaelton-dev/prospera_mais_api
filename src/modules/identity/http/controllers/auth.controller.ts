@@ -45,11 +45,11 @@ export class AuthController {
     @Header('Cache-Control', 'no-store')
     getCsrfToken(
         @Req() request: Request,
-        @Res({  passthrough: true }) response: Response
+        @Res({ passthrough: true }) response: Response,
     ): { csrfToken: string } {
         return {
-            csrfToken: this.csrfService.generateToken(request, response)
-        }
+            csrfToken: this.csrfService.generateToken(request, response),
+        };
     }
 
     @Public()
@@ -60,7 +60,7 @@ export class AuthController {
     @Header('Cache-Control', 'no-store')
     async register(
         @Body() input: RegisterAccountDto,
-        @Res({ passthrough: true }) response: Response
+        @Res({ passthrough: true }) response: Response,
     ): Promise<AuthenticatedContext> {
         const result = await this.RegisterAccountHandler.execute(input);
         this.sessionCookieService.set(response, result.sessionToken);
@@ -76,7 +76,7 @@ export class AuthController {
     @Header('Cache-Control', 'no-store')
     async login(
         @Body() input: LoginDto,
-        @Res({ passthrough: true }) response: Response
+        @Res({ passthrough: true }) response: Response,
     ): Promise<AuthenticatedContext> {
         const result = await this.loginHandler.execute(input);
 
@@ -88,7 +88,7 @@ export class AuthController {
     @Get('me')
     @Header('Cache-Control', 'no-store')
     getCurrentContext(
-        @CurrentActor() actor: AuthenticatedActor
+        @CurrentActor() actor: AuthenticatedActor,
     ): Promise<AuthenticatedContext> {
         return this.getCurrentContextQuery.execute(actor.personId);
     }
@@ -98,7 +98,7 @@ export class AuthController {
     @Header('Cache-Control', 'no-store')
     async logout(
         @CurrentActor() actor: AuthenticatedActor,
-        @Res({ passthrough: true }) response: Response
+        @Res({ passthrough: true }) response: Response,
     ): Promise<void> {
         await this.logoutHandler.execute(actor.sessionId);
 

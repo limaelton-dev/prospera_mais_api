@@ -91,9 +91,7 @@ import { IdentityExceptionFilter } from './http/filters/identity-exception.filte
         },
     ],
 
-    controllers: [
-        AuthController,
-    ],
+    controllers: [AuthController],
 
     exports: [],
 })
