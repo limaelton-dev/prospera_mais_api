@@ -26,7 +26,7 @@ const validityInMilliseconds = 72 * 60 * 60 * 1000;
 export class Invitation {
     private readonly props: InvitationProps;
 
-    constructor(props: InvitationProps) {
+    private constructor(props: InvitationProps) {
         const pending = props.status === InvitationStatus.PENDING;
         const cancelled = props.status === InvitationStatus.CANCELLED;
 

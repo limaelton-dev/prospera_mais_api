@@ -83,9 +83,16 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
         db = app.get(DataSource);
         assertTestDatabase(db);
 
-        await db.query(
-            'TRUNCATE TABLE auth_sessions, auth_credentials, spaces, persons',
-        );
+        await db.query(`
+            TRUNCATE TABLE
+                space_command_receipts,
+                space_invitations,
+                space_members,
+                auth_sessions,
+                auth_credentials,
+                spaces,
+                persons
+        `);
     });
 
     afterEach(async () => {
@@ -127,12 +134,18 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
         return cookie!;
     }
 
-    it('aplica a migration real em banco vazio', async () => {
-        expect(migrations).toEqual(['InitialCard0011789556956788']);
+    it('aplica as migrations reais em banco vazio', async () => {
+        expect(migrations).toEqual([
+            'InitialCard0011789556956788',
+            expect.stringMatching(/^Card002SharedSpaces\d+$/),
+        ]);
         expect(await counts()).toEqual([0, 0, 0, 0]);
 
-        const rows = await db.query('SELECT name FROM migrations');
-        expect(rows).toEqual([{ name: 'InitialCard0011789556956788' }]);
+        const rows: { name: string }[] = await db.query(
+            'SELECT name FROM migrations ORDER BY id',
+        );
+
+        expect(rows.map((row) => row.name)).toEqual(migrations);
     });
 
     it('persiste pessoa, espaço, credencial e hash da sessão', async () => {

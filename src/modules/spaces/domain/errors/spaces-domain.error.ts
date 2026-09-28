@@ -13,6 +13,6 @@ export type SpacesDomainErrorCode = keyof typeof messages;
 export class SpacesDomainError extends Error {
     constructor(public readonly code: SpacesDomainErrorCode) {
         super(messages[code]);
-        this.name = 'SpaceDomainError';
+        this.name = 'SpacesDomainError';
     }
 }
