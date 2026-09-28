@@ -1,31 +1,102 @@
+import { SpacesDomainError } from '../errors/spaces-domain.error.js';
+import { InvitationId } from '../invitation/invitation-id.js';
+import { Invitation, InvitationStatus } from '../invitation/invitation.js';
+import { MemberId } from '../member/member-id.js';
+import { Member, MemberStatus } from '../member/member.js';
 import { PersonId } from '../person/person-id.js';
 import { SpaceId } from './space-id.js';
 
 export enum SpaceType {
     PERSONAL = 'PERSONAL',
-    // 'PERSONAL' | 'SHARED',
+    SHARED = 'SHARED',
 }
 
 export enum SpaceStatus {
     ACTIVE = 'ACTIVE',
-    // 'ACTIVE' | 'CLOSING' | 'CLOSED'
+    CLOSING = 'CLOSING',
+    CLOSED = 'CLOSED',
 }
-type SpaceProps = {
+
+type BaseSpaceProps = {
     id: SpaceId;
-    type: SpaceType;
-    status: SpaceStatus;
-    personalOwnerPersonId: PersonId;
     version: number;
     createdAt: Date;
     updatedAt: Date;
 };
 
+export type PersonalSpaceProps = BaseSpaceProps & {
+    type: SpaceType.PERSONAL;
+    status: SpaceStatus.ACTIVE;
+    personalOwnerPersonId: PersonId;
+};
+
+export type SharedSpaceProps = BaseSpaceProps & {
+    type: SpaceType.SHARED;
+    status: SpaceStatus;
+    personalOwnerPersonId: null;
+    name: string;
+    createdByPersonId: PersonId;
+    members: readonly Member[];
+    invitations: readonly Invitation[];
+};
+
+export type SpaceProps = PersonalSpaceProps | SharedSpaceProps;
+
+type CreateSharedSpaceInput = {
+    id: SpaceId;
+    name: string;
+    createdByPersonId: PersonId;
+    creatorMemberId: MemberId;
+    invitationId: InvitationId;
+    now: Date;
+};
+
+function normalizeName(name: string): string {
+    if (typeof name !== 'string') {
+        throw new SpacesDomainError('VALIDATION_ERROR');
+    }
+
+    const normalized = name.trim();
+    const containsControl = Array.from(normalized).some((character) => {
+        const code = character.charCodeAt(0);
+
+        return code <= 31 || (code >= 127 && code <= 159);
+    });
+
+    if (normalized.length < 1 || normalized.length > 80 || containsControl) {
+        throw new SpacesDomainError('VALIDATION_ERROR');
+    }
+
+    return normalized;
+}
+
 export class Space {
-    private constructor(private readonly props: SpaceProps) {}
+    private props: SpaceProps;
 
-    static createPersonal(id: SpaceId, ownerPersonId: PersonId): Space {
-        const now = new Date();
+    private constructor(props: SpaceProps) {
+        this.props =
+            props.type === SpaceType.SHARED
+                ? {
+                      ...props,
+                      members: [...props.members],
+                      invitations: [...props.invitations],
+                      createdAt: new Date(props.createdAt),
+                      updatedAt: new Date(props.updatedAt),
+                  }
+                : {
+                      ...props,
+                      createdAt: new Date(props.createdAt),
+                      updatedAt: new Date(props.updatedAt),
+                  };
 
+        this.assertInvariants();
+    }
+
+    static createPersonal(
+        id: SpaceId,
+        ownerPersonId: PersonId,
+        now = new Date(),
+    ): Space {
         if (!ownerPersonId) {
             throw new Error('Personal space requires an owner');
         }
@@ -41,29 +112,287 @@ export class Space {
         });
     }
 
+    static createShared(input: CreateSharedSpaceInput): Space {
+        return new Space({
+            id: input.id,
+            type: SpaceType.SHARED,
+            status: SpaceStatus.ACTIVE,
+            personalOwnerPersonId: null,
+            name: normalizeName(input.name),
+            createdByPersonId: input.createdByPersonId,
+            members: [
+                Member.create(
+                    input.creatorMemberId,
+                    input.createdByPersonId,
+                    input.now,
+                ),
+            ],
+            invitations: [
+                Invitation.issue(
+                    input.invitationId,
+                    input.createdByPersonId,
+                    input.now,
+                ),
+            ],
+            version: 1,
+            createdAt: input.now,
+            updatedAt: input.now,
+        });
+    }
+
     static restore(props: SpaceProps): Space {
         return new Space(props);
+    }
+
+    issueInvitation(
+        actorPersonId: PersonId,
+        invitationId: InvitationId,
+        now: Date,
+    ): Invitation {
+        const props = this.requireInvitationIssuer(actorPersonId);
+
+        if (
+            props.invitations.some(
+                (invitation) =>
+                    invitation.statusAt(now) === InvitationStatus.PENDING,
+            )
+        ) {
+            throw new SpacesDomainError('INVITATION_ALREADY_PENDING');
+        }
+
+        this.assertNewInvitationId(props, invitationId);
+
+        const invitation = Invitation.issue(invitationId, actorPersonId, now);
+        const invitations = props.invitations.map((existing) =>
+            existing.expireIfDue(now),
+        );
+
+        this.commitInvitations(props, [...invitations, invitation], now);
+
+        return invitation;
+    }
+
+    replaceInvitation(
+        actorPersonId: PersonId,
+        invitationId: InvitationId,
+        newInvitationId: InvitationId,
+        now: Date,
+    ): Invitation {
+        const props = this.requireInvitationIssuer(actorPersonId);
+        const previous = props.invitations.find((invitation) =>
+            invitation.id.equals(invitationId),
+        );
+
+        if (!previous || previous.statusAt(now) !== InvitationStatus.PENDING) {
+            throw new SpacesDomainError('INVITATION_NOT_REPLACEABLE');
+        }
+
+        this.assertNewInvitationId(props, newInvitationId);
+
+        const invitation = Invitation.issue(
+            newInvitationId,
+            actorPersonId,
+            now,
+        );
+        const cancelled = previous.replaceWith(newInvitationId, now);
+        const invitations = props.invitations.map((existing) =>
+            existing.id.equals(invitationId) ? cancelled : existing,
+        );
+
+        this.commitInvitations(props, [...invitations, invitation], now);
+
+        return invitation;
+    }
+
+    snapshot(): SpaceProps {
+        if (this.props.type === SpaceType.SHARED) {
+            return {
+                ...this.props,
+                members: [...this.props.members],
+                invitations: [...this.props.invitations],
+                createdAt: this.createdAt,
+                updatedAt: this.updatedAt,
+            };
+        }
+
+        return {
+            ...this.props,
+            createdAt: this.createdAt,
+            updatedAt: this.updatedAt,
+        };
+    }
+
+    private assertInvariants(): void {
+        const props = this.props;
+
+        if (
+            !props.id ||
+            !Number.isSafeInteger(props.version) ||
+            props.version < 1 ||
+            !Number.isFinite(props.createdAt.getTime()) ||
+            !Number.isFinite(props.updatedAt.getTime()) ||
+            !Object.values(SpaceStatus).includes(props.status)
+        ) {
+            throw new Error('Invalid space state');
+        }
+
+        if (props.type === SpaceType.PERSONAL) {
+            if (
+                !props.personalOwnerPersonId ||
+                props.status !== SpaceStatus.ACTIVE
+            ) {
+                throw new Error('Invalid personal space state');
+            }
+
+            return;
+        }
+
+        if (
+            props.type !== SpaceType.SHARED ||
+            props.personalOwnerPersonId !== null ||
+            !props.createdByPersonId ||
+            normalizeName(props.name) !== props.name
+        ) {
+            throw new Error('Invalid shared space state');
+        }
+
+        const activeMembers = props.members.filter(
+            (member) => member.status === MemberStatus.ACTIVE,
+        );
+
+        if (activeMembers.length > 2) {
+            throw new SpacesDomainError('SPACE_MEMBER_LIMIT_REACHED');
+        }
+
+        const memberIds = new Set(
+            props.members.map((member) => member.id.value),
+        );
+        const personIds = new Set(
+            activeMembers.map((member) => member.personId.value),
+        );
+        const invitationIds = new Set(
+            props.invitations.map((invitation) => invitation.id.value),
+        );
+        const pendingCount = props.invitations.filter(
+            (invitation) => invitation.status === InvitationStatus.PENDING,
+        ).length;
+
+        if (
+            memberIds.size !== props.members.length ||
+            personIds.size !== activeMembers.length ||
+            invitationIds.size !== props.invitations.length ||
+            pendingCount > 1
+        ) {
+            throw new Error('Inconsistent shared space children');
+        }
+    }
+
+    private requireInvitationIssuer(actorPersonId: PersonId): SharedSpaceProps {
+        const props = this.props;
+
+        if (
+            props.type !== SpaceType.SHARED ||
+            !props.members.some(
+                (member) =>
+                    member.status === MemberStatus.ACTIVE &&
+                    member.personId.equals(actorPersonId),
+            )
+        ) {
+            throw new SpacesDomainError('SPACE_NOT_FOUND');
+        }
+
+        if (!props.createdByPersonId.equals(actorPersonId)) {
+            throw new SpacesDomainError('INVITATION_ISSUER_REQUIRED');
+        }
+
+        if (props.status !== SpaceStatus.ACTIVE) {
+            throw new SpacesDomainError('SPACE_NOT_ACTIVE');
+        }
+
+        if (this.activeMemberCount >= 2) {
+            throw new SpacesDomainError('SPACE_MEMBER_LIMIT_REACHED');
+        }
+
+        return props;
+    }
+
+    private assertNewInvitationId(
+        props: SharedSpaceProps,
+        id: InvitationId,
+    ): void {
+        if (props.invitations.some((invitation) => invitation.id.equals(id))) {
+            throw new Error('Invitation identity must be new');
+        }
+    }
+
+    private commitInvitations(
+        props: SharedSpaceProps,
+        invitations: readonly Invitation[],
+        now: Date,
+    ): void {
+        const next = new Space({
+            ...props,
+            invitations,
+            version: props.version + 1,
+            updatedAt: now,
+        });
+
+        this.props = next.props;
     }
 
     get id(): SpaceId {
         return this.props.id;
     }
+
     get type(): SpaceType {
         return this.props.type;
     }
+
     get status(): SpaceStatus {
         return this.props.status;
     }
-    get personalOwnerPersonId(): PersonId {
+
+    get personalOwnerPersonId(): PersonId | null {
         return this.props.personalOwnerPersonId;
     }
+
+    get name(): string | null {
+        return this.props.type === SpaceType.SHARED ? this.props.name : null;
+    }
+
+    get createdByPersonId(): PersonId | null {
+        return this.props.type === SpaceType.SHARED
+            ? this.props.createdByPersonId
+            : null;
+    }
+
+    get members(): readonly Member[] {
+        return this.props.type === SpaceType.SHARED
+            ? [...this.props.members]
+            : [];
+    }
+
+    get invitations(): readonly Invitation[] {
+        return this.props.type === SpaceType.SHARED
+            ? [...this.props.invitations]
+            : [];
+    }
+
+    get activeMemberCount(): number {
+        return this.members.filter(
+            (member) => member.status === MemberStatus.ACTIVE,
+        ).length;
+    }
+
     get version(): number {
         return this.props.version;
     }
+
     get createdAt(): Date {
-        return this.props.createdAt;
+        return new Date(this.props.createdAt);
     }
+
     get updatedAt(): Date {
-        return this.props.updatedAt;
+        return new Date(this.props.updatedAt);
     }
 }
