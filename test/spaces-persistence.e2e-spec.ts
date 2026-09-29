@@ -28,6 +28,14 @@ import { SpaceOrmEntity } from '../dist/modules/spaces/infrastructure/typeorm/en
 import { SpaceCommandReceiptOrmEntity } from '../dist/modules/spaces/infrastructure/typeorm/entities/space-command-receipt.orm-entity.js';
 import { AuthCredentialOrmEntity } from '../dist/modules/identity/infrastructure/typeorm/entities/auth-credential.orm-entity.js';
 import { AuthSessionOrmEntity } from '../dist/modules/identity/infrastructure/typeorm/entities/auth-session.orm-entity.js';
+import { ConfigService } from '@nestjs/config';
+import { SpaceInvitationCommandService } from '../dist/modules/spaces/application/services/space-invitation-command.service.js';
+import { CreateSharedSpaceHandler } from '../dist/modules/spaces/application/handlers/create-shared-space.handler.js';
+import { IssueSpaceInvitationHandler } from '../dist/modules/spaces/application/handlers/issue-space-invitation.handler.js';
+import { ReplaceSpaceInvitationHandler } from '../dist/modules/spaces/application/handlers/replace-space-invitation.handler.js';
+import { ListAccessibleSpacesQuery } from '../dist/modules/spaces/application/queries/list-accessible-spaces.query.js';
+import { GetSpaceDetailsQuery } from '../dist/modules/spaces/application/queries/get-space-details.query.js';
+import { TypeOrmSpaceReadQueries } from '../dist/modules/spaces/infrastructure/queries/typeorm-space-read-queries.js';
 
 const now = new Date('2026-09-28T12:00:00.000Z');
 
@@ -36,6 +44,12 @@ describe('CARD-002 — persistência PostgreSQL', () => {
     let repository: TypeOrmSpaceRepository;
     let receipts: TypeOrmSpaceCommandReceipts;
     let uow: TypeOrmUnitOfWork;
+    let reads: TypeOrmSpaceReadQueries;
+    let createSpace: CreateSharedSpaceHandler;
+    let issueInvitation: IssueSpaceInvitationHandler;
+    let replaceInvitation: ReplaceSpaceInvitationHandler;
+    let listSpaces: ListAccessibleSpacesQuery;
+    let getDetails: GetSpaceDetailsQuery;
     let upgradeVerified = false;
 
     const tokens = new NodeInvitationTokenGenerator();
@@ -110,6 +124,22 @@ describe('CARD-002 — persistência PostgreSQL', () => {
         repository = new TypeOrmSpaceRepository(managerProvider);
         receipts = new TypeOrmSpaceCommandReceipts(managerProvider);
         uow = new TypeOrmUnitOfWork(db, context);
+        reads = new TypeOrmSpaceReadQueries(managerProvider);
+
+        const commands = new SpaceInvitationCommandService(
+            uow,
+            repository,
+            receipts,
+            tokens,
+            reads,
+            new ConfigService({ WEB_ORIGIN: 'https://app.example.com' }),
+        );
+
+        createSpace = new CreateSharedSpaceHandler(commands);
+        issueInvitation = new IssueSpaceInvitationHandler(commands);
+        replaceInvitation = new ReplaceSpaceInvitationHandler(commands);
+        listSpaces = new ListAccessibleSpacesQuery(reads);
+        getDetails = new GetSpaceDetailsQuery(reads);
 
         const personal = await repository.findPersonalByOwnerPersonId(
             PersonId.from(personId),
@@ -574,5 +604,303 @@ describe('CARD-002 — persistência PostgreSQL', () => {
             'result_space_id',
         ]);
         expect(stored[0].request_hash).toHaveLength(32);
+    });
+
+    it('os handlers convergem na criação concorrente e recuperam o convite original', async () => {
+        const actorId = await createPerson();
+        const input = {
+            actorId,
+            key: randomUUID(),
+            name: 'Casa',
+        };
+
+        const results = await Promise.all([
+            createSpace.execute(input),
+            createSpace.execute(input),
+        ]);
+
+        expect(results[0].space.id).toBe(results[1].space.id);
+        expect(results[0].invitation.id).toBe(results[1].invitation.id);
+        expect(results.filter((result) => result.replayed)).toHaveLength(1);
+        expect(await counts()).toEqual([1, 1, 1, 1]);
+
+        const first = results.find((result) => !result.replayed);
+
+        if (!first) {
+            throw new Error('Expected one original emission');
+        }
+
+        await replaceInvitation.execute({
+            actorId,
+            key: randomUUID(),
+            spaceId: SpaceId.from(first.space.id),
+            invitationId: InvitationId.from(first.invitation.id),
+            expectedVersion: 1,
+        });
+
+        const replay = await createSpace.execute(input);
+
+        expect(replay.space.id).toBe(first.space.id);
+        expect(replay.space.version).toBe(2);
+        expect(replay.invitation.id).toBe(first.invitation.id);
+        expect(replay.invitation.status).toBe('CANCELLED');
+        expect(replay.inviteUrl).toBeNull();
+        expect(replay.linkAvailable).toBe(false);
+        expect(replay.replayed).toBe(true);
+        expect(await counts()).toEqual([1, 1, 2, 2]);
+    });
+
+    it('a substituição concorrente com a mesma chave produz um único efeito', async () => {
+        const actorId = await createPerson();
+        const created = await createSpace.execute({
+            actorId,
+            key: randomUUID(),
+            name: 'Casa',
+        });
+
+        const input = {
+            actorId,
+            key: randomUUID(),
+            spaceId: SpaceId.from(created.space.id),
+            invitationId: InvitationId.from(created.invitation.id),
+            expectedVersion: 1,
+        };
+
+        const results = await Promise.all([
+            replaceInvitation.execute(input),
+            replaceInvitation.execute(input),
+        ]);
+
+        expect(results[0].invitation.id).toBe(results[1].invitation.id);
+        expect(results.filter((result) => result.replayed)).toHaveLength(1);
+        expect(results.filter((result) => result.linkAvailable)).toHaveLength(
+            1,
+        );
+        expect(await counts()).toEqual([1, 1, 2, 2]);
+
+        const replay = await replaceInvitation.execute(input);
+
+        expect(replay.replayed).toBe(true);
+        expect(replay.space.version).toBe(2);
+        expect(replay.inviteUrl).toBeNull();
+        expect(await counts()).toEqual([1, 1, 2, 2]);
+    });
+
+    it('o handler de emissão normaliza o convite expirado', async () => {
+        const actorId = await createPerson();
+        const issuedAt = new Date(Date.now() - 73 * 60 * 60 * 1000);
+        const invitationId = InvitationId.create();
+        const space = Space.createShared({
+            id: SpaceId.create(),
+            name: 'Casa',
+            createdByPersonId: actorId,
+            creatorMemberId: MemberId.create(),
+            invitationId,
+            now: issuedAt,
+        });
+
+        await uow.execute(() =>
+            repository.createShared(space, {
+                invitationId,
+                tokenHash: tokens.generate().tokenHash,
+            }),
+        );
+
+        const result = await issueInvitation.execute({
+            actorId,
+            key: randomUUID(),
+            spaceId: space.id,
+            expectedVersion: 1,
+        });
+
+        expect(result.space.version).toBe(2);
+        expect(result.invitation.id).not.toBe(invitationId.value);
+        expect(result.invitation.status).toBe('PENDING');
+
+        const rows = await db.query(
+            'SELECT status FROM space_invitations WHERE id = $1',
+            [invitationId.value],
+        );
+
+        expect(rows[0].status).toBe('EXPIRED');
+        expect(await counts()).toEqual([1, 1, 2, 1]);
+    });
+
+    it('o handler de criação reverte tudo se falhar após gravar o recibo', async () => {
+        const actorId = await createPerson();
+        const originalSave = receipts.save.bind(receipts);
+        const failure = new Error('Failure after receipt');
+        const spy = vi
+            .spyOn(receipts, 'save')
+            .mockImplementationOnce(async (command, receipt) => {
+                await originalSave(command, receipt);
+                throw failure;
+            });
+
+        try {
+            await expect(
+                createSpace.execute({
+                    actorId,
+                    key: randomUUID(),
+                    name: 'Casa',
+                }),
+            ).rejects.toBe(failure);
+        } finally {
+            spy.mockRestore();
+        }
+
+        expect(await counts()).toEqual([0, 0, 0, 0]);
+    });
+
+    it('o handler de substituição preserva o anterior quando o recibo falha', async () => {
+        const actorId = await createPerson();
+        const created = await createSpace.execute({
+            actorId,
+            key: randomUUID(),
+            name: 'Casa',
+        });
+
+        const failure = new Error('Receipt persistence failed');
+        const spy = vi.spyOn(receipts, 'save').mockRejectedValueOnce(failure);
+
+        try {
+            await expect(
+                replaceInvitation.execute({
+                    actorId,
+                    key: randomUUID(),
+                    spaceId: SpaceId.from(created.space.id),
+                    invitationId: InvitationId.from(created.invitation.id),
+                    expectedVersion: 1,
+                }),
+            ).rejects.toBe(failure);
+        } finally {
+            spy.mockRestore();
+        }
+
+        const restored = await repository.findById(
+            SpaceId.from(created.space.id),
+        );
+
+        expect(restored?.version).toBe(1);
+        expect(restored?.invitations[0].status).toBe('PENDING');
+        expect(restored?.invitations[0].replacedByInvitationId).toBeNull();
+        expect(await counts()).toEqual([1, 1, 1, 1]);
+    });
+
+    it('as consultas isolam pessoas, ordenam espaços e ocultam segredos', async () => {
+        const actorId = await createPerson();
+        const otherActor = await createPerson();
+        const personal = Space.createPersonal(SpaceId.create(), actorId);
+
+        await uow.execute(() => repository.save(personal));
+
+        const first = await createSpace.execute({
+            actorId,
+            key: randomUUID(),
+            name: 'Casa A',
+        });
+        const second = await createSpace.execute({
+            actorId,
+            key: randomUUID(),
+            name: 'Casa B',
+        });
+
+        const list = await listSpaces.execute(actorId);
+
+        expect(list.items.map((item) => item.id)).toEqual([
+            personal.id.value,
+            first.space.id,
+            second.space.id,
+        ]);
+        expect(await listSpaces.execute(otherActor)).toEqual({ items: [] });
+
+        const personalDetails = await getDetails.execute(actorId, personal.id);
+
+        expect(personalDetails.actorMembership).toBeNull();
+        expect(personalDetails.activeMemberCount).toBe(0);
+        expect(personalDetails.invitation).toBeNull();
+
+        await expect(
+            getDetails.execute(otherActor, SpaceId.from(first.space.id)),
+        ).rejects.toMatchObject({ code: 'SPACE_NOT_FOUND' });
+
+        await expect(
+            getDetails.execute(actorId, SpaceId.create()),
+        ).rejects.toMatchObject({ code: 'SPACE_NOT_FOUND' });
+
+        const details = await getDetails.execute(
+            actorId,
+            SpaceId.from(first.space.id),
+        );
+
+        expect(details.invitation?.canReplace).toBe(true);
+        expect(details.invitation?.canIssue).toBe(false);
+        expect(details).not.toHaveProperty('inviteUrl');
+        expect(JSON.stringify(details)).not.toContain('tokenHash');
+        expect(JSON.stringify(details)).not.toContain('token_hash');
+
+        await db.getRepository(SpaceMemberOrmEntity).insert({
+            id: randomUUID(),
+            spaceId: first.space.id,
+            personId: otherActor.value,
+            status: 'ACTIVE',
+            slot: 2,
+            joinedAt: new Date(),
+        });
+
+        const memberDetails = await getDetails.execute(
+            otherActor,
+            SpaceId.from(first.space.id),
+        );
+
+        expect(memberDetails.activeMemberCount).toBe(2);
+        expect(memberDetails.invitation).toBeNull();
+
+        const creatorDetails = await getDetails.execute(
+            actorId,
+            SpaceId.from(first.space.id),
+        );
+
+        expect(creatorDetails.invitation?.canIssue).toBe(false);
+        expect(creatorDetails.invitation?.canReplace).toBe(false);
+
+        expect(
+            await reads.findInvitationResult(
+                otherActor,
+                SpaceId.from(first.space.id),
+                InvitationId.from(first.invitation.id),
+                new Date(),
+            ),
+        ).toBeNull();
+
+        await expect(
+            issueInvitation.execute({
+                actorId: otherActor,
+                key: randomUUID(),
+                spaceId: SpaceId.from(first.space.id),
+                expectedVersion: 1,
+            }),
+        ).rejects.toMatchObject({ code: 'INVITATION_ISSUER_REQUIRED' });
+    });
+
+    it('a consulta apresenta EXPIRED sem gravar a expiração', async () => {
+        const actorId = await createPerson();
+        const input = await persist(actorId);
+        const expiration = input.space.invitations[0].expiresAt;
+
+        const details = await reads.findDetails(
+            actorId,
+            input.space.id,
+            expiration,
+        );
+
+        expect(details?.invitation?.status).toBe('EXPIRED');
+        expect(details?.invitation?.canIssue).toBe(true);
+        expect(details?.invitation?.canReplace).toBe(false);
+
+        const restored = await repository.findById(input.space.id);
+
+        expect(restored?.version).toBe(1);
+        expect(restored?.invitations[0].status).toBe('PENDING');
     });
 });

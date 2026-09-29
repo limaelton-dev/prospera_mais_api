@@ -1,5 +1,6 @@
 import { InvitationId } from '../../../domain/invitation/invitation-id.js';
 import { PersonId } from '../../../domain/person/person-id.js';
+import { SpaceId } from '../../../domain/space/space-id.js';
 import { Space } from '../../../domain/space/space.js';
 
 export const SPACE_REPOSITORY = Symbol('SPACE_REPOSITORY');
@@ -11,6 +12,8 @@ export type NewInvitationPersistence = {
 
 export interface SpaceRepository {
     save(space: Space): Promise<void>;
+
+    findById(space: SpaceId): Promise<Space | null>;
 
     findPersonalByOwnerPersonId(personId: PersonId): Promise<Space | null>;
 
