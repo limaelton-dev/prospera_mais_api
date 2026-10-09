@@ -73,3 +73,46 @@ export type InvitationCommandResponse =
 export type CreateSharedSpaceResponse = InvitationCommandResponse & {
     actorMembership: ActorMembershipResponse;
 };
+
+export type InvitationDecision = 'ACCEPT' | 'REJECT';
+
+export type InvitationPreviewResponse = {
+    invitation: {
+        id: string;
+        status: 'PENDING';
+        expiresAt: string;
+    };
+    space: {
+        id: string;
+        label: string;
+        version: number;
+    };
+    invitedBy: {
+        displayName: string;
+    };
+    canRespond: boolean;
+};
+
+export type RespondToInvitationResponse =
+    | {
+          decision: 'ACCEPT';
+          invitation: {
+              id: string;
+              status: 'ACCEPTED';
+              resolvedAt: string;
+          };
+          spaceId: string;
+          actorMembership: ActorMembershipResponse;
+          replayed: boolean;
+      }
+    | {
+          decision: 'REJECT';
+          invitation: {
+              id: string;
+              status: 'REJECTED';
+              resolvedAt: string;
+          };
+          spaceId: string;
+          actorMembership: null;
+          replayed: boolean;
+      };
