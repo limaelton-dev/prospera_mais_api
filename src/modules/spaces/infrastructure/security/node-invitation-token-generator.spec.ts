@@ -23,4 +23,23 @@ describe('NodeInvitationTokenGenerator', () => {
         expect(first.token).not.toBe(second.token);
         expect(first.tokenHash).not.toEqual(second.tokenHash);
     });
+
+    it('localiza tokens emitidos usando o mesmo hash dos bytes UTF-8', () => {
+        const generator = new NodeInvitationTokenGenerator();
+        const generated = generator.generate();
+
+        expect(generator.hash(generated.token)).toEqual(generated.tokenHash);
+        expect(generator.hash(` ${generated.token}`)).not.toEqual(
+            generated.tokenHash,
+        );
+        expect(generator.hash(`${generated.token} `)).not.toEqual(
+            generated.tokenHash,
+        );
+        expect(generator.hash('a'.repeat(43))).not.toEqual(
+            generator.hash('A'.repeat(43)),
+        );
+        expect(generator.hash('a'.repeat(43))).toEqual(
+            createHash('sha256').update('a'.repeat(43), 'utf8').digest(),
+        );
+    });
 });

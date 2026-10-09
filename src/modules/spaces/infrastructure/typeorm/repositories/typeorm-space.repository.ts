@@ -3,9 +3,12 @@ import type { EntityManager } from 'typeorm';
 import { EntityManagerProvider } from '../../../../../shared/technical/database/typeorm/entity-manager.provider.js';
 import { ConcurrentModificationError } from '../../../application/errors/concurrent-modification.error.js';
 import type {
+    InvitationResponsePersistence,
+    InvitationResponseTarget,
     NewInvitationPersistence,
     SpaceRepository,
 } from '../../../application/ports/private/space.repository.js';
+import { InvitationId } from '../../../domain/invitation/invitation-id.js';
 import { InvitationStatus } from '../../../domain/invitation/invitation.js';
 import { PersonId } from '../../../domain/person/person-id.js';
 import { SpaceId } from '../../../domain/space/space-id.js';
@@ -76,6 +79,42 @@ export class TypeOrmSpaceRepository implements SpaceRepository {
             .getOne();
 
         return entity ? SpaceMapper.toDomain(entity) : null;
+    }
+
+    async findByInvitationTokenHash(
+        tokenHash: Uint8Array,
+    ): Promise<InvitationResponseTarget | null> {
+        if (tokenHash.byteLength !== 32) {
+            throw new Error('Expected an invitation token hash');
+        }
+
+        const entity = await this.entityManagerProvider
+            .get()
+            .getRepository(SpaceOrmEntity)
+            .createQueryBuilder('space')
+            .innerJoinAndMapMany(
+                'space.invitations',
+                SpaceInvitationOrmEntity,
+                'invitation',
+                'invitation.space_id = space.id AND invitation.token_hash = :hash',
+                { hash: Buffer.from(tokenHash) },
+            )
+            .leftJoinAndMapMany(
+                'space.members',
+                SpaceMemberOrmEntity,
+                'member',
+                "member.space_id = space.id AND member.status = 'ACTIVE'",
+            )
+            .getOne();
+
+        if (!entity) {
+            return null;
+        }
+
+        return {
+            space: SpaceMapper.toDomain(entity),
+            invitationId: InvitationId.from(entity.invitations![0].id),
+        };
     }
 
     async createShared(
@@ -169,6 +208,110 @@ export class TypeOrmSpaceRepository implements SpaceRepository {
             ...SpaceMapper.invitationToPersistence(createdInvitation, space.id),
             tokenHash: Buffer.from(invitation.tokenHash),
         });
+    }
+
+    async saveInvitationResponse(
+        space: Space,
+        expectedVersion: number,
+        response: InvitationResponsePersistence,
+    ): Promise<void> {
+        const manager = this.transactionManager();
+        const invitation = space.invitations.find((candidate) =>
+            candidate.id.equals(response.invitationId),
+        );
+        const member =
+            response.memberId === null
+                ? null
+                : space.members.find((candidate) =>
+                      candidate.id.equals(response.memberId!),
+                  );
+
+        if (
+            space.type !== SpaceType.SHARED ||
+            space.status !== 'ACTIVE' ||
+            !Number.isSafeInteger(expectedVersion) ||
+            expectedVersion < 1 ||
+            space.version !== expectedVersion + 1 ||
+            !invitation ||
+            !invitation.resolvedAt ||
+            invitation.resolvedAt.getTime() !== space.updatedAt.getTime() ||
+            (invitation.status !== InvitationStatus.ACCEPTED &&
+                invitation.status !== InvitationStatus.REJECTED) ||
+            (invitation.status === InvitationStatus.ACCEPTED
+                ? !member ||
+                  member.joinedAt.getTime() !== invitation.resolvedAt.getTime()
+                : response.memberId !== null)
+        ) {
+            throw new Error('Invalid invitation response persistence input');
+        }
+
+        const result = await manager
+            .createQueryBuilder()
+            .update(SpaceOrmEntity)
+            .set({ version: () => '"version" + 1', updatedAt: space.updatedAt })
+            .where(
+                'id = :id AND version = :version AND type = :type AND status = :status',
+                {
+                    id: space.id.value,
+                    version: expectedVersion,
+                    type: SpaceType.SHARED,
+                    status: 'ACTIVE',
+                },
+            )
+            .execute();
+
+        if (result.affected !== 1) {
+            throw new ConcurrentModificationError();
+        }
+
+        const updated = await manager
+            .createQueryBuilder()
+            .update(SpaceInvitationOrmEntity)
+            .set({
+                status: invitation.status,
+                resolvedAt: invitation.resolvedAt,
+            })
+            .where(
+                'id = :id AND space_id = :spaceId AND status = :pending AND expires_at > :now',
+                {
+                    id: invitation.id.value,
+                    spaceId: space.id.value,
+                    pending: InvitationStatus.PENDING,
+                    now: invitation.resolvedAt,
+                },
+            )
+            .execute();
+
+        if (updated.affected !== 1) {
+            throw new ConcurrentModificationError();
+        }
+
+        if (member) {
+            const existing = await manager.find(SpaceMemberOrmEntity, {
+                where: { spaceId: space.id.value, status: 'ACTIVE' },
+            });
+            const slot = [1, 2].find(
+                (candidate) =>
+                    !existing.some(
+                        (existingMember) => existingMember.slot === candidate,
+                    ),
+            );
+
+            if (existing.length !== 1 || slot === undefined) {
+                throw new Error(
+                    'Expected exactly one member before acceptance',
+                );
+            }
+
+            await manager.insert(SpaceMemberOrmEntity, {
+                id: member.id.value,
+                spaceId: space.id.value,
+                personId: member.personId.value,
+                status: member.status,
+                slot,
+                joinedAt: member.joinedAt,
+            });
+        }
     }
 
     private transactionManager(): EntityManager {

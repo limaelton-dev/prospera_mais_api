@@ -9,8 +9,12 @@ import type {
 export class NodeInvitationTokenGenerator implements InvitationTokenGenerator {
     generate(): GeneratedInvitationToken {
         const token = randomBytes(32).toString('base64url');
-        const tokenHash = createHash('sha256').update(token, 'utf8').digest();
+        const tokenHash = this.hash(token);
 
         return { token, tokenHash };
+    }
+
+    hash(token: string): Uint8Array {
+        return createHash('sha256').update(token, 'utf8').digest();
     }
 }

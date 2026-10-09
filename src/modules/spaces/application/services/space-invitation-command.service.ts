@@ -21,7 +21,7 @@ import {
 } from '../ports/private/invitation-token-generator.js';
 import {
     SPACE_COMMAND_RECEIPTS,
-    type SpaceCommand,
+    type SpaceInvitationCommand,
     type SpaceCommandReceipt,
     type SpaceCommandReceipts,
 } from '../ports/private/space-command-receipts.js';
@@ -55,7 +55,9 @@ export class SpaceInvitationCommandService {
         private readonly configService: ConfigService,
     ) {}
 
-    async execute(command: SpaceCommand): Promise<SpaceCommandResult> {
+    async execute(
+        command: SpaceInvitationCommand,
+    ): Promise<SpaceCommandResult> {
         try {
             return await this.unitOfWork.execute(() => this.perform(command));
         } catch (error: unknown) {
@@ -82,7 +84,9 @@ export class SpaceInvitationCommandService {
         }
     }
 
-    private async perform(command: SpaceCommand): Promise<SpaceCommandResult> {
+    private async perform(
+        command: SpaceInvitationCommand,
+    ): Promise<SpaceCommandResult> {
         const existing =
             command.operation === 'CREATE_SPACE'
                 ? null

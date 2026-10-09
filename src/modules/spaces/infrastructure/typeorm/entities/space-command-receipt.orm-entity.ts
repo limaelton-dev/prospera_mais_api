@@ -12,7 +12,7 @@ import { Check, Column, Entity, ForeignKey, PrimaryColumn } from 'typeorm';
 )
 @Check(
     'CHK_space_command_receipts_operation',
-    `"operation" IN ('CREATE_SPACE', 'ISSUE_INVITATION', 'REPLACE_INVITATION')`,
+    `"operation" IN ('CREATE_SPACE', 'ISSUE_INVITATION', 'REPLACE_INVITATION', 'RESPOND_INVITATION')`,
 )
 @Check('CHK_space_command_receipts_hash', `octet_length("request_hash") = 32`)
 export class SpaceCommandReceiptOrmEntity {

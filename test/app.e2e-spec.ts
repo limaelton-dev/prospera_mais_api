@@ -424,6 +424,7 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
         expect(migrations).toEqual([
             'InitialCard0011789556956788',
             expect.stringMatching(/^Card002SharedSpaces\d+$/),
+            expect.stringMatching(/^Card003InvitationResponses\d+$/),
         ]);
         expect(await counts()).toEqual([0, 0, 0, 0]);
 

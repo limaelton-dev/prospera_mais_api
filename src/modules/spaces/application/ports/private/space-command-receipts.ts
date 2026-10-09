@@ -9,7 +9,7 @@ type CommandIdentity = {
     key: string;
 };
 
-export type SpaceCommand =
+export type SpaceInvitationCommand =
     | (CommandIdentity & {
           operation: 'CREATE_SPACE';
           name: string;
@@ -25,6 +25,15 @@ export type SpaceCommand =
           invitationId: InvitationId;
           expectedVersion: number;
       });
+
+export type RespondToInvitationCommand = CommandIdentity & {
+    operation: 'RESPOND_INVITATION';
+    tokenHash: Uint8Array;
+    decision: 'ACCEPT' | 'REJECT';
+    expectedVersion: number;
+};
+
+export type SpaceCommand = SpaceInvitationCommand | RespondToInvitationCommand;
 
 export type SpaceCommandReceipt = {
     resultSpaceId: SpaceId;
