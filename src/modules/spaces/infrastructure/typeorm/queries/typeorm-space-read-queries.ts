@@ -1,16 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { EntityManagerProvider } from '../../../../shared/technical/database/typeorm/entity-manager.provider.js';
+import { EntityManagerProvider } from '../../../../../shared/technical/database/typeorm/entity-manager.provider.js';
 import type {
     ActorMembershipView,
     InvitationView,
     SpaceDetailsView,
     SpaceInvitationView,
     SpaceSummaryView,
-} from '../../application/models/space-views.js';
-import type { SpaceReadQueries } from '../../application/ports/private/space-read-queries.js';
-import { InvitationId } from '../../domain/invitation/invitation-id.js';
-import { PersonId } from '../../domain/person/person-id.js';
-import { SpaceId } from '../../domain/space/space-id.js';
+} from '../../../application/models/space-views.js';
+import type { SpaceReadQueries } from '../../../application/ports/private/space-read-queries.js';
+import { InvitationId } from '../../../domain/invitation/invitation-id.js';
+import { PersonId } from '../../../domain/person/person-id.js';
+import { SpaceId } from '../../../domain/space/space-id.js';
 
 type SummaryRow = {
     id: string;

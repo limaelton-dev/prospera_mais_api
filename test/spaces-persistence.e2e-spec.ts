@@ -35,7 +35,7 @@ import { IssueSpaceInvitationHandler } from '../dist/modules/spaces/application/
 import { ReplaceSpaceInvitationHandler } from '../dist/modules/spaces/application/handlers/replace-space-invitation.handler.js';
 import { ListAccessibleSpacesQuery } from '../dist/modules/spaces/application/queries/list-accessible-spaces.query.js';
 import { GetSpaceDetailsQuery } from '../dist/modules/spaces/application/queries/get-space-details.query.js';
-import { TypeOrmSpaceReadQueries } from '../dist/modules/spaces/infrastructure/queries/typeorm-space-read-queries.js';
+import { TypeOrmSpaceReadQueries } from '../dist/modules/spaces/infrastructure/typeorm/queries/typeorm-space-read-queries.js';
 
 const now = new Date('2026-09-28T12:00:00.000Z');
 

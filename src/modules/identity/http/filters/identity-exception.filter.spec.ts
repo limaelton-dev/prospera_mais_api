@@ -13,7 +13,8 @@ import { EmailAlreadyInUseError } from '../../application/errors/email-already-i
 import { InvalidCredentialsError } from '../../application/errors/invalid-credentials.error.js';
 import { UnauthenticatedError } from '../../application/errors/unauthenticated.error.js';
 import { createValidationException } from '../../../../shared/technical/http/validation/create-validation-exception.js';
-import { IdentityExceptionFilter } from './identity-exception.filter.js';
+import { ApiExceptionFilter } from '../../../../shared/technical/http/api-exception.filter.js';
+import { mapIdentityError } from './identity-error.mapper.js';
 
 function execute(exception: unknown, headersSent = false) {
     const headers = new Map<string, string>([['Retry-After', '60']]);
@@ -28,14 +29,14 @@ function execute(exception: unknown, headersSent = false) {
     };
 
     const host = new ExecutionContextHost([{}, response]);
-    new IdentityExceptionFilter().catch(exception, host);
+    new ApiExceptionFilter([mapIdentityError]).catch(exception, host);
 
     return { response, headers };
 }
 
 afterEach(() => vi.restoreAllMocks());
 
-describe('IdentityExceptionFilter', () => {
+describe('Identity — integração com ApiExceptionFilter', () => {
     it.each([
         [new EmailAlreadyInUseError(), 409],
         [new InvalidCredentialsError(), 401],

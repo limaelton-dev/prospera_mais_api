@@ -7,7 +7,7 @@ import cookieParser from 'cookie-parser';
 
 import { CsrfService } from './modules/identity/http/services/csrf.service.js';
 import { createValidationException } from './shared/technical/http/validation/create-validation-exception.js';
-import { createAuthOpenApiDocument } from './modules/identity/http/openapi/auth.openapi.js';
+import { createApiOpenApiDocument } from './composition/http/create-api-openapi-document.js';
 
 export function configureApp(app: INestApplication): void {
     const config = app.get(ConfigService);
@@ -40,7 +40,7 @@ export function configureApp(app: INestApplication): void {
         }),
     );
 
-    SwaggerModule.setup('docs', app, createAuthOpenApiDocument(isProduction), {
+    SwaggerModule.setup('docs', app, createApiOpenApiDocument(isProduction), {
         useGlobalPrefix: true,
         jsonDocumentUrl: 'openapi.json',
         yamlDocumentUrl: 'openapi.yaml',

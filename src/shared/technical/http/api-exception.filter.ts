@@ -3,15 +3,12 @@ import {
     Catch,
     HttpException,
     Logger,
+    UnauthorizedException,
     type ArgumentsHost,
     type ExceptionFilter,
 } from '@nestjs/common';
 import { ThrottlerException } from '@nestjs/throttler';
 import type { Response } from 'express';
-
-import { EmailAlreadyInUseError } from '../../application/errors/email-already-in-use.error.js';
-import { InvalidCredentialsError } from '../../application/errors/invalid-credentials.error.js';
-import { UnauthenticatedError } from '../../application/errors/unauthenticated.error.js';
 
 type ErrorBody = {
     code: string;
@@ -24,9 +21,13 @@ type ErrorResponse = {
     body: ErrorBody;
 };
 
+export type HttpErrorMapper = (exception: unknown) => ErrorResponse | null;
+
 @Catch()
-export class IdentityExceptionFilter implements ExceptionFilter<unknown> {
-    private readonly logger = new Logger(IdentityExceptionFilter.name);
+export class ApiExceptionFilter implements ExceptionFilter<unknown> {
+    private readonly logger = new Logger(ApiExceptionFilter.name);
+
+    constructor(private readonly mappers: readonly HttpErrorMapper[]) {}
 
     catch(exception: unknown, host: ArgumentsHost): void {
         const response = host.switchToHttp().getResponse<Response>();
@@ -47,16 +48,20 @@ export class IdentityExceptionFilter implements ExceptionFilter<unknown> {
     }
 
     private mapError(exception: unknown): ErrorResponse {
-        if (exception instanceof EmailAlreadyInUseError) {
-            return this.error(409, exception.code, exception.message);
+        for (const mapper of this.mappers) {
+            const mapped = mapper(exception);
+
+            if (mapped) {
+                return mapped;
+            }
         }
 
-        if (exception instanceof InvalidCredentialsError) {
-            return this.error(401, exception.code, exception.message);
-        }
-
-        if (exception instanceof UnauthenticatedError) {
-            return this.error(401, exception.code, exception.message);
+        if (exception instanceof UnauthorizedException) {
+            return this.error(
+                401,
+                'UNAUTHENTICATED',
+                'Autenticação necessária.',
+            );
         }
 
         if (this.isCsrfError(exception)) {

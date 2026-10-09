@@ -17,8 +17,9 @@ import { RegisterAccountHandler } from '../../application/handlers/register-acco
 import { LoginHandler } from '../../application/handlers/login.handler.js';
 import { LogoutHandler } from '../../application/handlers/logout.handler.js';
 import { GetCurrentContextQuery } from '../../application/queries/get-current-context.query.js';
-import type { AuthenticatedActor } from '../../application/models/authenticated-actor.js';
 import type { AuthenticatedContext } from '../../application/models/authenticated-context.js';
+import type { RequestActor } from '../../../../shared/technical/http/current-actor.decorator.js';
+import { PersonId } from '../../../spaces/domain/person/person-id.js';
 
 import { CurrentActor } from '../decorators/current-actor.decorator.js';
 import { Public } from '../decorators/public.decorator.js';
@@ -88,16 +89,18 @@ export class AuthController {
     @Get('me')
     @Header('Cache-Control', 'no-store')
     getCurrentContext(
-        @CurrentActor() actor: AuthenticatedActor,
+        @CurrentActor() actor: RequestActor,
     ): Promise<AuthenticatedContext> {
-        return this.getCurrentContextQuery.execute(actor.personId);
+        return this.getCurrentContextQuery.execute(
+            PersonId.from(actor.personId.value),
+        );
     }
 
     @Post('logout')
     @HttpCode(HttpStatus.NO_CONTENT)
     @Header('Cache-Control', 'no-store')
     async logout(
-        @CurrentActor() actor: AuthenticatedActor,
+        @CurrentActor() actor: RequestActor,
         @Res({ passthrough: true }) response: Response,
     ): Promise<void> {
         await this.logoutHandler.execute(actor.sessionId);
