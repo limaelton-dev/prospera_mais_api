@@ -2,6 +2,7 @@ import type { OpenAPIObject } from '@nestjs/swagger';
 
 import { createAuthOpenApiDocument } from '../../modules/identity/http/openapi/auth.openapi.js';
 import { spacesOpenApi } from '../../modules/spaces/http/openapi/spaces.openapi.js';
+import { invitationsOpenApi } from '../../modules/spaces/http/openapi/invitations.openapi.js';
 
 export function createApiOpenApiDocument(isProduction: boolean): OpenAPIObject {
     const auth = createAuthOpenApiDocument(isProduction);
@@ -11,18 +12,20 @@ export function createApiOpenApiDocument(isProduction: boolean): OpenAPIObject {
         info: {
             ...auth.info,
             title: 'Prospera Mais API',
-            version: '0.2.0',
+            version: '0.3.0',
         },
         tags: [...(auth.tags ?? []), ...(spacesOpenApi.tags ?? [])],
         paths: {
             ...auth.paths,
             ...spacesOpenApi.paths,
+            ...invitationsOpenApi.paths,
         },
         components: {
             ...auth.components,
             schemas: {
                 ...auth.components?.schemas,
                 ...spacesOpenApi.components?.schemas,
+                ...invitationsOpenApi.components?.schemas,
             },
             parameters: {
                 ...auth.components?.parameters,

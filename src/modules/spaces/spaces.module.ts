@@ -26,6 +26,9 @@ import { GetSpaceDetailsQuery } from './application/queries/get-space-details.qu
 import { ListAccessibleSpacesQuery } from './application/queries/list-accessible-spaces.query.js';
 import { SpaceInvitationCommandService } from './application/services/space-invitation-command.service.js';
 import { SpacesController } from './http/controllers/spaces.controller.js';
+import { InvitationsController } from './http/controllers/invitations.controller.js';
+import { GetInvitationPreviewQuery } from './application/queries/get-invitation-preview.query.js';
+import { RespondToSharedSpaceInvitationHandler } from './application/handlers/respond-to-shared-space-invitation.handler.js';
 import { TypeOrmSpaceReadQueries } from './infrastructure/typeorm/queries/typeorm-space-read-queries.js';
 @Module({
     imports: [
@@ -39,7 +42,7 @@ import { TypeOrmSpaceReadQueries } from './infrastructure/typeorm/queries/typeor
         ]),
     ],
 
-    controllers: [SpacesController],
+    controllers: [SpacesController, InvitationsController],
 
     providers: [
         TypeOrmPersonRepository,
@@ -55,6 +58,8 @@ import { TypeOrmSpaceReadQueries } from './infrastructure/typeorm/queries/typeor
         ReplaceSpaceInvitationHandler,
         ListAccessibleSpacesQuery,
         GetSpaceDetailsQuery,
+        GetInvitationPreviewQuery,
+        RespondToSharedSpaceInvitationHandler,
 
         {
             provide: SPACE_READ_QUERIES,

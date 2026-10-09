@@ -809,7 +809,7 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
             .expect(200);
 
         expect(response.body.openapi).toBe('3.1.0');
-        expect(Object.keys(response.body.paths)).toHaveLength(9);
+        expect(Object.keys(response.body.paths)).toHaveLength(11);
 
         const paths = response.body.paths as Record<
             string,
@@ -834,7 +834,7 @@ describe('CARD-001 — PostgreSQL e HTTP', () => {
             0,
         );
 
-        expect(operations).toBe(10);
+        expect(operations).toBe(12);
         expect(paths['/v2/spaces']).toHaveProperty('get');
         expect(paths['/v2/spaces']).toHaveProperty('post');
 
