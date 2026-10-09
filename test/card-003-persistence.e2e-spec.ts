@@ -1,7 +1,16 @@
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { DataSource } from 'typeorm';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+    afterAll,
+    afterEach,
+    beforeAll,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
+} from 'vitest';
 import { TEST_DATABASE_URL } from './setup-env.js';
 import migrationDataSource from '../dist/shared/technical/database/typeorm/data-source.js';
 import { InitialCard0011789556956788 } from '../dist/shared/technical/database/typeorm/migrations/1789556956788-InitialCard001.js';
@@ -12,6 +21,9 @@ import { EntityManagerProvider } from '../dist/shared/technical/database/typeorm
 import { TypeOrmUnitOfWork } from '../dist/shared/technical/database/typeorm/typeorm-unit-of-work.js';
 import { TypeOrmSpaceRepository } from '../dist/modules/spaces/infrastructure/typeorm/repositories/typeorm-space.repository.js';
 import { TypeOrmSpaceCommandReceipts } from '../dist/modules/spaces/infrastructure/typeorm/repositories/typeorm-space-command-receipts.js';
+import { TypeOrmSpaceReadQueries } from '../dist/modules/spaces/infrastructure/typeorm/queries/typeorm-space-read-queries.js';
+import { GetInvitationPreviewQuery } from '../dist/modules/spaces/application/queries/get-invitation-preview.query.js';
+import { RespondToSharedSpaceInvitationHandler } from '../dist/modules/spaces/application/handlers/respond-to-shared-space-invitation.handler.js';
 import { NodeInvitationTokenGenerator } from '../dist/modules/spaces/infrastructure/security/node-invitation-token-generator.js';
 import { ConcurrentModificationError } from '../dist/modules/spaces/application/errors/concurrent-modification.error.js';
 import { IdempotencyKeyReusedError } from '../dist/modules/spaces/application/errors/idempotency-key-reused.error.js';
@@ -49,6 +61,9 @@ describe('CARD-003 — persistência e migration', () => {
     let repository: TypeOrmSpaceRepository;
     let receipts: TypeOrmSpaceCommandReceipts;
     let uow: TypeOrmUnitOfWork;
+    let reads: TypeOrmSpaceReadQueries;
+    let preview: GetInvitationPreviewQuery;
+    let respond: RespondToSharedSpaceInvitationHandler;
     let upgradeVerified = false;
 
     function configure(source: DataSource) {
@@ -57,6 +72,15 @@ describe('CARD-003 — persistência e migration', () => {
         repository = new TypeOrmSpaceRepository(provider);
         receipts = new TypeOrmSpaceCommandReceipts(provider);
         uow = new TypeOrmUnitOfWork(source, context);
+        reads = new TypeOrmSpaceReadQueries(provider);
+        preview = new GetInvitationPreviewQuery(reads, tokens);
+        respond = new RespondToSharedSpaceInvitationHandler(
+            uow,
+            repository,
+            receipts,
+            tokens,
+            reads,
+        );
     }
 
     beforeAll(async () => {
@@ -129,6 +153,13 @@ describe('CARD-003 — persistência e migration', () => {
             TRUNCATE TABLE space_command_receipts, space_invitations,
                 space_members, auth_sessions, auth_credentials, spaces, persons
         `);
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(now);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.useRealTimers();
     });
 
     afterAll(async () => {
@@ -532,6 +563,291 @@ describe('CARD-003 — persistência e migration', () => {
             version: 2,
             receipts: 1,
             invitationStatus: 'REJECTED',
+        });
+    });
+
+    function responseInput(
+        input: Awaited<ReturnType<typeof persist>>,
+        actorId: PersonId,
+        decision: 'ACCEPT' | 'REJECT' = 'ACCEPT',
+    ) {
+        return {
+            actorId,
+            key: randomUUID(),
+            token: input.token,
+            decision,
+            expectedVersion: 1,
+        };
+    }
+
+    function holdBothReads() {
+        const original = repository.findByInvitationTokenHash.bind(repository);
+        let arrivals = 0;
+        let release!: () => void;
+        const both = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        vi.spyOn(repository, 'findByInvitationTokenHash').mockImplementation(
+            async (hash) => {
+                const snapshot = await original(hash);
+                arrivals++;
+                if (arrivals === 2) release();
+                await both;
+                return snapshot;
+            },
+        );
+    }
+
+    it('preview é somente leitura e não concede acesso ao destinatário', async () => {
+        const input = await persist(await createPerson());
+        const actor = await createPerson();
+        const before = await state(input.space.id);
+        expect(await preview.execute(actor, input.token)).toEqual({
+            invitation: {
+                id: input.invitationId.value,
+                status: 'PENDING',
+                expiresAt: input.space.invitations[0].expiresAt.toISOString(),
+            },
+            space: { id: input.space.id.value, label: 'Casa', version: 1 },
+            invitedBy: { displayName: 'Pessoa de teste' },
+            canRespond: true,
+        });
+        expect(await state(input.space.id)).toEqual(before);
+        expect(await reads.findDetails(actor, input.space.id, now)).toBeNull();
+        expect(await reads.listAccessible(actor)).toEqual([]);
+        expect(
+            (await preview.execute(input.space.createdByPersonId!, input.token))
+                .canRespond,
+        ).toBe(false);
+    });
+
+    it('preview não grava expiração e a decisão não reutiliza o instante da prévia', async () => {
+        const input = await persist(await createPerson());
+        const actor = await createPerson();
+        const expiry = input.space.invitations[0].expiresAt;
+        vi.setSystemTime(new Date(expiry.getTime() - 1));
+        expect((await preview.execute(actor, input.token)).canRespond).toBe(
+            true,
+        );
+        vi.setSystemTime(expiry);
+        await expect(preview.execute(actor, input.token)).rejects.toMatchObject(
+            { code: 'INVITATION_UNAVAILABLE' },
+        );
+        await expect(
+            respond.execute(responseInput(input, actor)),
+        ).rejects.toMatchObject({ code: 'INVITATION_UNAVAILABLE' });
+        expect(await state(input.space.id)).toMatchObject({
+            version: 1,
+            members: 1,
+            receipts: 0,
+            invitationStatus: 'PENDING',
+        });
+    });
+
+    it.each(['ACCEPT', 'REJECT'] as const)(
+        'recupera resposta perdida de %s depois da expiração',
+        async (decision) => {
+            const input = await persist(await createPerson());
+            const actor = await createPerson();
+            const command = responseInput(input, actor, decision);
+            const first = await respond.execute(command);
+            const before = await state(input.space.id);
+            vi.setSystemTime(
+                new Date(input.space.invitations[0].expiresAt.getTime() + 1),
+            );
+            const replay = await respond.execute(command);
+            expect(replay).toEqual({ ...first, replayed: true });
+            expect(await state(input.space.id)).toEqual(before);
+            expect(
+                (await reads.findDetails(actor, input.space.id, new Date())) ===
+                    null,
+            ).toBe(decision === 'REJECT');
+            if (decision === 'ACCEPT') {
+                const details = await reads.findDetails(
+                    actor,
+                    input.space.id,
+                    new Date(),
+                );
+                expect(details).toMatchObject({
+                    activeMemberCount: 2,
+                    invitation: null,
+                    actorMembership: first.actorMembership,
+                });
+            }
+            await expect(
+                respond.execute({ ...command, actorId: await createPerson() }),
+            ).rejects.toMatchObject({ code: 'INVITATION_UNAVAILABLE' });
+        },
+    );
+
+    it('recusa recupera o convite exato mesmo depois de nova emissão', async () => {
+        const input = await persist(await createPerson());
+        const command = responseInput(input, await createPerson(), 'REJECT');
+        const first = await respond.execute(command);
+        const root = (await repository.findById(input.space.id))!;
+        const nextId = InvitationId.create();
+        root.issueInvitation(
+            root.createdByPersonId!,
+            nextId,
+            new Date(now.getTime() + 1),
+        );
+        await uow.execute(() =>
+            repository.saveInvitationChange(root, 2, {
+                invitationId: nextId,
+                tokenHash: tokens.generate().tokenHash,
+            }),
+        );
+        expect(await respond.execute(command)).toEqual({
+            ...first,
+            replayed: true,
+        });
+        expect((await repository.findById(input.space.id))?.version).toBe(3);
+        expect(first.actorMembership).toBeNull();
+    });
+
+    it.each(['decision', 'token', 'expectedVersion'] as const)(
+        'handler detecta reutilização da chave mudando %s',
+        async (field) => {
+            const input = await persist(await createPerson());
+            const command = responseInput(
+                input,
+                await createPerson(),
+                'REJECT',
+            );
+            await respond.execute(command);
+            const changed = { ...command };
+            if (field === 'decision') changed.decision = 'ACCEPT';
+            if (field === 'token') changed.token = tokens.generate().token;
+            if (field === 'expectedVersion') changed.expectedVersion = 2;
+            await expect(respond.execute(changed)).rejects.toBeInstanceOf(
+                IdempotencyKeyReusedError,
+            );
+            expect(await state(input.space.id)).toMatchObject({
+                version: 2,
+                members: 1,
+                receipts: 1,
+            });
+        },
+    );
+
+    it('duas execuções concorrentes da mesma chave recuperam um único resultado', async () => {
+        const input = await persist(await createPerson());
+        const command = responseInput(input, await createPerson());
+        holdBothReads();
+        const results = await Promise.all([
+            respond.execute(command),
+            respond.execute(command),
+        ]);
+        expect(results.map((result) => result.replayed).sort()).toEqual([
+            false,
+            true,
+        ]);
+        expect(results[0].actorMembership).toEqual(results[1].actorMembership);
+        expect(await state(input.space.id)).toMatchObject({
+            version: 2,
+            members: 2,
+            receipts: 1,
+            invitationStatus: 'ACCEPTED',
+        });
+    });
+
+    it.each(['ACCEPT', 'REJECT'] as const)(
+        'handler arbitra aceite contra %s de outro ator',
+        async (decision) => {
+            const input = await persist(await createPerson());
+            const first = responseInput(input, await createPerson());
+            const second = responseInput(input, await createPerson(), decision);
+            holdBothReads();
+            const results = await Promise.allSettled([
+                respond.execute(first),
+                respond.execute(second),
+            ]);
+            expect(
+                results.filter((result) => result.status === 'fulfilled'),
+            ).toHaveLength(1);
+            expect(
+                results.find((result) => result.status === 'rejected')?.reason,
+            ).toBeInstanceOf(ConcurrentModificationError);
+            expect(await state(input.space.id)).toMatchObject({
+                version: 2,
+                receipts: 1,
+            });
+        },
+    );
+
+    it('resultado recuperado exige ator, token, recibo e convite correspondentes', async () => {
+        const input = await persist(await createPerson());
+        const actorId = await createPerson();
+        const request = responseInput(input, actorId, 'REJECT');
+        await respond.execute(request);
+        const command: RespondToInvitationCommand = {
+            operation: 'RESPOND_INVITATION',
+            actorId,
+            key: request.key,
+            tokenHash: input.tokenHash,
+            decision: 'REJECT',
+            expectedVersion: 1,
+        };
+        const receipt = (await receipts.find(command))!;
+        expect(
+            await reads.findInvitationResponseResult(command, receipt),
+        ).not.toBeNull();
+        expect(
+            await reads.findInvitationResponseResult(
+                { ...command, actorId: await createPerson() },
+                receipt,
+            ),
+        ).toBeNull();
+        expect(
+            await reads.findInvitationResponseResult(
+                { ...command, tokenHash: tokens.generate().tokenHash },
+                receipt,
+            ),
+        ).toBeNull();
+        expect(
+            await reads.findInvitationResponseResult(
+                { ...command, key: randomUUID() },
+                receipt,
+            ),
+        ).toBeNull();
+        expect(
+            await reads.findInvitationResponseResult(command, {
+                ...receipt,
+                resultInvitationId: InvitationId.create(),
+            }),
+        ).toBeNull();
+    });
+
+    it('replay de aceite revalida membership ativo', async () => {
+        const input = await persist(await createPerson());
+        const command = responseInput(input, await createPerson());
+        const first = await respond.execute(command);
+        await db.query('DELETE FROM space_members WHERE id = $1', [
+            first.actorMembership!.id,
+        ]);
+        await expect(respond.execute(command)).rejects.toMatchObject({
+            code: 'INVITATION_UNAVAILABLE',
+        });
+        expect(await state(input.space.id)).toMatchObject({
+            version: 2,
+            receipts: 1,
+            members: 1,
+        });
+    });
+
+    it('handler não confirma a decisão se o recibo falhar; transação reverte tudo', async () => {
+        const input = await persist(await createPerson());
+        vi.spyOn(receipts, 'save').mockRejectedValueOnce(
+            new Error('Injected receipt failure'),
+        );
+        await expect(
+            respond.execute(responseInput(input, await createPerson())),
+        ).rejects.toThrow('Injected receipt failure');
+        expect(await state(input.space.id)).toMatchObject({
+            version: 1,
+            members: 1,
+            receipts: 0,
+            invitationStatus: 'PENDING',
         });
     });
 });

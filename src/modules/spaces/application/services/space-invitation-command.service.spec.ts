@@ -55,6 +55,10 @@ function fixture(issuedAt = now) {
     };
 
     const readQueries = {
+        findInvitationPreview:
+            vi.fn<SpaceReadQueries['findInvitationPreview']>(),
+        findInvitationResponseResult:
+            vi.fn<SpaceReadQueries['findInvitationResponseResult']>(),
         listAccessible: vi.fn<SpaceReadQueries['listAccessible']>(),
         findDetails: vi.fn<SpaceReadQueries['findDetails']>(),
         findInvitationResult: vi.fn<SpaceReadQueries['findInvitationResult']>(),
