@@ -1,0 +1,41 @@
+import type { OpenAPIObject } from '@nestjs/swagger';
+
+import { createAuthOpenApiDocument } from '../../modules/identity/http/openapi/auth.openapi.js';
+import { spacesOpenApi } from '../../modules/spaces/http/openapi/spaces.openapi.js';
+
+export function createApiOpenApiDocument(isProduction: boolean): OpenAPIObject {
+    const auth = createAuthOpenApiDocument(isProduction);
+
+    return {
+        ...auth,
+        info: {
+            ...auth.info,
+            title: 'Prospera Mais API',
+            version: '0.2.0',
+        },
+        tags: [...(auth.tags ?? []), ...(spacesOpenApi.tags ?? [])],
+        paths: {
+            ...auth.paths,
+            ...spacesOpenApi.paths,
+        },
+        components: {
+            ...auth.components,
+            schemas: {
+                ...auth.components?.schemas,
+                ...spacesOpenApi.components?.schemas,
+            },
+            parameters: {
+                ...auth.components?.parameters,
+                ...spacesOpenApi.components?.parameters,
+            },
+            responses: {
+                ...auth.components?.responses,
+                ...spacesOpenApi.components?.responses,
+            },
+            securitySchemes: {
+                ...auth.components?.securitySchemes,
+                ...spacesOpenApi.components?.securitySchemes,
+            },
+        },
+    };
+}

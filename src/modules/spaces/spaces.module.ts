@@ -11,19 +11,63 @@ import { PROVISION_PERSONAL_CONTEXT } from './application/ports/public/provision
 import { ProvisionPersonalContextService } from './application/services/provision-personal-context.service.js';
 import { GetPersonalContextService } from './application/services/get-personal-context.service.js';
 import { GET_PERSONAL_CONTEXT } from './application/ports/public/get-personal-context.js';
-
+import { SpaceMemberOrmEntity } from './infrastructure/typeorm/entities/space-member.orm-entity.js';
+import { SpaceInvitationOrmEntity } from './infrastructure/typeorm/entities/space-invitation.orm-entity.js';
+import { SpaceCommandReceiptOrmEntity } from './infrastructure/typeorm/entities/space-command-receipt.orm-entity.js';
+import { NodeInvitationTokenGenerator } from './infrastructure/security/node-invitation-token-generator.js';
+import { TypeOrmSpaceCommandReceipts } from './infrastructure/typeorm/repositories/typeorm-space-command-receipts.js';
+import { INVITATION_TOKEN_GENERATOR } from './application/ports/private/invitation-token-generator.js';
+import { SPACE_COMMAND_RECEIPTS } from './application/ports/private/space-command-receipts.js';
+import { CreateSharedSpaceHandler } from './application/handlers/create-shared-space.handler.js';
+import { IssueSpaceInvitationHandler } from './application/handlers/issue-space-invitation.handler.js';
+import { ReplaceSpaceInvitationHandler } from './application/handlers/replace-space-invitation.handler.js';
+import { SPACE_READ_QUERIES } from './application/ports/private/space-read-queries.js';
+import { GetSpaceDetailsQuery } from './application/queries/get-space-details.query.js';
+import { ListAccessibleSpacesQuery } from './application/queries/list-accessible-spaces.query.js';
+import { SpaceInvitationCommandService } from './application/services/space-invitation-command.service.js';
+import { SpacesController } from './http/controllers/spaces.controller.js';
+import { TypeOrmSpaceReadQueries } from './infrastructure/typeorm/queries/typeorm-space-read-queries.js';
 @Module({
     imports: [
         DatabaseModule,
-        TypeOrmModule.forFeature([PersonOrmEntity, SpaceOrmEntity]),
+        TypeOrmModule.forFeature([
+            PersonOrmEntity,
+            SpaceOrmEntity,
+            SpaceMemberOrmEntity,
+            SpaceInvitationOrmEntity,
+            SpaceCommandReceiptOrmEntity,
+        ]),
     ],
+
+    controllers: [SpacesController],
 
     providers: [
         TypeOrmPersonRepository,
         TypeOrmSpaceRepository,
         ProvisionPersonalContextService,
         GetPersonalContextService,
+        NodeInvitationTokenGenerator,
+        TypeOrmSpaceCommandReceipts,
+        TypeOrmSpaceReadQueries,
+        SpaceInvitationCommandService,
+        CreateSharedSpaceHandler,
+        IssueSpaceInvitationHandler,
+        ReplaceSpaceInvitationHandler,
+        ListAccessibleSpacesQuery,
+        GetSpaceDetailsQuery,
 
+        {
+            provide: SPACE_READ_QUERIES,
+            useExisting: TypeOrmSpaceReadQueries,
+        },
+        {
+            provide: INVITATION_TOKEN_GENERATOR,
+            useExisting: NodeInvitationTokenGenerator,
+        },
+        {
+            provide: SPACE_COMMAND_RECEIPTS,
+            useExisting: TypeOrmSpaceCommandReceipts,
+        },
         {
             provide: PERSON_REPOSITORY,
             useExisting: TypeOrmPersonRepository,

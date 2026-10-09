@@ -6,6 +6,7 @@ on:
             - main
             - 'card/**'
             - card-001-account-session
+            - 'card-*'
     pull_request:
         branches:
             - main

@@ -1,12 +1,11 @@
 import 'reflect-metadata';
 import { describe, expect, it } from 'vitest';
-import type { ExecutionContext } from '@nestjs/common';
+import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants.js';
 import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host.js';
 
 import { PersonId } from '../../../spaces/domain/person/person-id.js';
 import type { AuthenticatedActor } from '../../application/models/authenticated-actor.js';
-import { UnauthenticatedError } from '../../application/errors/unauthenticated.error.js';
 import type { AuthenticatedRequest } from '../types/authenticated-request.js';
 import { CurrentActor } from './current-actor.decorator.js';
 
@@ -50,6 +49,6 @@ describe('CurrentActor', () => {
     });
 
     it('rejeita a requisição quando não existe ator autenticado', () => {
-        expect(() => extractActor({})).toThrow(UnauthenticatedError);
+        expect(() => extractActor({})).toThrow(UnauthorizedException);
     });
 });

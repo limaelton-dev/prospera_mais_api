@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 import { DatabaseModule } from '../../shared/technical/database/database.module.js';
@@ -29,7 +29,6 @@ import { AuthController } from './http/controllers/auth.controller.js';
 import { LogoutHandler } from './application/handlers/logout.handler.js';
 import { GetCurrentContextQuery } from './application/queries/get-current-context.query.js';
 import { SessionCookieService } from './http/services/session-cookie.service.js';
-import { IdentityExceptionFilter } from './http/filters/identity-exception.filter.js';
 
 @Module({
     imports: [
@@ -68,10 +67,6 @@ import { IdentityExceptionFilter } from './http/filters/identity-exception.filte
         {
             provide: APP_GUARD,
             useExisting: SessionAuthGuard,
-        },
-        {
-            provide: APP_FILTER,
-            useClass: IdentityExceptionFilter,
         },
         {
             provide: CREDENTIAL_REPOSITORY,
