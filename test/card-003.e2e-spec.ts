@@ -780,6 +780,9 @@ describe('CARD-003 — contrato HTTP com PostgreSQL', () => {
                 .expect(429);
             expect(response.body.code).toBe('TOO_MANY_REQUESTS');
             expect(Number(response.get('Retry-After'))).toBeGreaterThan(0);
+            expect(response.get('Access-Control-Expose-Headers')).toBe(
+                'Retry-After',
+            );
             noSecrets(response, unknownToken);
             const other = endpoint === 'preview' ? 'respond' : 'preview';
             await recipient
