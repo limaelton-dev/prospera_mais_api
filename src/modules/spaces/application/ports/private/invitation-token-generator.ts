@@ -7,4 +7,6 @@ export type GeneratedInvitationToken = {
 
 export interface InvitationTokenGenerator {
     generate(): GeneratedInvitationToken;
+
+    hash(token: string): Uint8Array;
 }

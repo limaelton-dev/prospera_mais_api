@@ -35,6 +35,18 @@ function requestHash(command: SpaceCommand): Buffer {
                 command.expectedVersion,
             ];
             break;
+        case 'RESPOND_INVITATION':
+            if (command.tokenHash.byteLength !== 32) {
+                throw new Error('Expected an invitation token hash');
+            }
+
+            input = [
+                command.operation,
+                Buffer.from(command.tokenHash).toString('hex'),
+                command.decision,
+                command.expectedVersion,
+            ];
+            break;
     }
 
     return createHash('sha256').update(JSON.stringify(input)).digest();

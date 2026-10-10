@@ -15,6 +15,8 @@ const domainStatuses: Record<SpacesDomainErrorCode, number> = {
     INVITATION_ISSUER_REQUIRED: 403,
     INVITATION_ALREADY_PENDING: 409,
     INVITATION_NOT_REPLACEABLE: 409,
+    INVITATION_UNAVAILABLE: 404,
+    INVITATION_RESPONSE_NOT_ALLOWED: 403,
 };
 
 export const mapSpacesError: HttpErrorMapper = (exception) => {

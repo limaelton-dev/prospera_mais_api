@@ -204,6 +204,47 @@ export class Space {
         return invitation;
     }
 
+    acceptInvitation(
+        actorPersonId: PersonId,
+        invitationId: InvitationId,
+        memberId: MemberId,
+        now: Date,
+    ): Member {
+        const { props, invitation } = this.requireInvitationResponse(
+            actorPersonId,
+            invitationId,
+            now,
+        );
+        const accepted = invitation.accept(now);
+        const member = Member.create(memberId, actorPersonId, now);
+
+        this.commitInvitationResponse(
+            props,
+            accepted,
+            [...props.members, member],
+            now,
+        );
+
+        return member;
+    }
+
+    rejectInvitation(
+        actorPersonId: PersonId,
+        invitationId: InvitationId,
+        now: Date,
+    ): Invitation {
+        const { props, invitation } = this.requireInvitationResponse(
+            actorPersonId,
+            invitationId,
+            now,
+        );
+        const rejected = invitation.reject(now);
+
+        this.commitInvitationResponse(props, rejected, props.members, now);
+
+        return rejected;
+    }
+
     snapshot(): SpaceProps {
         if (this.props.type === SpaceType.SHARED) {
             return {
@@ -314,6 +355,69 @@ export class Space {
         }
 
         return props;
+    }
+
+    private requireInvitationResponse(
+        actorPersonId: PersonId,
+        invitationId: InvitationId,
+        now: Date,
+    ): { props: SharedSpaceProps; invitation: Invitation } {
+        const props = this.props;
+
+        if (props.type !== SpaceType.SHARED) {
+            throw new SpacesDomainError('INVITATION_UNAVAILABLE');
+        }
+
+        const invitation = props.invitations.find((candidate) =>
+            candidate.id.equals(invitationId),
+        );
+
+        if (
+            !invitation ||
+            invitation.statusAt(now) !== InvitationStatus.PENDING
+        ) {
+            throw new SpacesDomainError('INVITATION_UNAVAILABLE');
+        }
+
+        if (props.status !== SpaceStatus.ACTIVE) {
+            throw new SpacesDomainError('SPACE_NOT_ACTIVE');
+        }
+
+        if (
+            props.createdByPersonId.equals(actorPersonId) ||
+            props.members.some(
+                (member) =>
+                    member.status === MemberStatus.ACTIVE &&
+                    member.personId.equals(actorPersonId),
+            )
+        ) {
+            throw new SpacesDomainError('INVITATION_RESPONSE_NOT_ALLOWED');
+        }
+
+        if (this.activeMemberCount >= 2) {
+            throw new SpacesDomainError('SPACE_MEMBER_LIMIT_REACHED');
+        }
+
+        return { props, invitation };
+    }
+
+    private commitInvitationResponse(
+        props: SharedSpaceProps,
+        invitation: Invitation,
+        members: readonly Member[],
+        now: Date,
+    ): void {
+        const next = new Space({
+            ...props,
+            members,
+            invitations: props.invitations.map((existing) =>
+                existing.id.equals(invitation.id) ? invitation : existing,
+            ),
+            version: props.version + 1,
+            updatedAt: now,
+        });
+
+        this.props = next.props;
     }
 
     private assertNewInvitationId(

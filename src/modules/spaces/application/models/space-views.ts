@@ -66,3 +66,37 @@ export type SpaceCommandResult =
           linkAvailable: false;
           replayed: true;
       });
+
+export type InvitationPreviewData = {
+    invitation: InvitationView;
+    space: SharedSpaceView;
+    invitedBy: { displayName: string };
+    activeMemberCount: number;
+    actorIsCreator: boolean;
+    actorIsMember: boolean;
+};
+
+export type InvitationPreviewView = {
+    invitation: { id: string; status: 'PENDING'; expiresAt: string };
+    space: { id: string; label: string; version: number };
+    invitedBy: { displayName: string };
+    canRespond: boolean;
+};
+
+export type InvitationResponseView =
+    | {
+          decision: 'ACCEPT';
+          invitation: { id: string; status: 'ACCEPTED'; resolvedAt: string };
+          spaceId: string;
+          actorMembership: ActorMembershipView;
+      }
+    | {
+          decision: 'REJECT';
+          invitation: { id: string; status: 'REJECTED'; resolvedAt: string };
+          spaceId: string;
+          actorMembership: null;
+      };
+
+export type RespondToInvitationResult = InvitationResponseView & {
+    replayed: boolean;
+};

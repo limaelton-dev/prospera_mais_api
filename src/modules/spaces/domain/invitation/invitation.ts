@@ -29,6 +29,9 @@ export class Invitation {
     private constructor(props: InvitationProps) {
         const pending = props.status === InvitationStatus.PENDING;
         const cancelled = props.status === InvitationStatus.CANCELLED;
+        const answered =
+            props.status === InvitationStatus.ACCEPTED ||
+            props.status === InvitationStatus.REJECTED;
 
         if (
             !props.id ||
@@ -42,6 +45,9 @@ export class Invitation {
             (props.resolvedAt !== null &&
                 (!Number.isFinite(props.resolvedAt.getTime()) ||
                     props.resolvedAt < props.issuedAt)) ||
+            (answered &&
+                props.resolvedAt !== null &&
+                props.resolvedAt >= props.expiresAt) ||
             (cancelled
                 ? props.cancellationReason !== 'REPLACED' ||
                   props.replacedByInvitationId === null
@@ -126,6 +132,33 @@ export class Invitation {
             resolvedAt: now,
             cancellationReason: 'REPLACED',
             replacedByInvitationId: newInvitationId,
+        });
+    }
+
+    accept(now: Date): Invitation {
+        return this.resolve(InvitationStatus.ACCEPTED, now);
+    }
+
+    reject(now: Date): Invitation {
+        return this.resolve(InvitationStatus.REJECTED, now);
+    }
+
+    private resolve(
+        status: InvitationStatus.ACCEPTED | InvitationStatus.REJECTED,
+        now: Date,
+    ): Invitation {
+        if (this.statusAt(now) !== InvitationStatus.PENDING) {
+            throw new SpacesDomainError('INVITATION_UNAVAILABLE');
+        }
+
+        if (now < this.props.issuedAt) {
+            throw new Error('Invalid invitation response time');
+        }
+
+        return new Invitation({
+            ...this.props,
+            status,
+            resolvedAt: now,
         });
     }
 

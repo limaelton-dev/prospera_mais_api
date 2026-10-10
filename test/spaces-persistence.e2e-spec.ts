@@ -116,6 +116,7 @@ describe('CARD-002 — persistência PostgreSQL', () => {
 
         expect(applied.map((migration) => migration.name)).toEqual([
             expect.stringMatching(/^Card002SharedSpaces\d+$/),
+            expect.stringMatching(/^Card003InvitationResponses\d+$/),
         ]);
 
         const context = new TransactionContext();

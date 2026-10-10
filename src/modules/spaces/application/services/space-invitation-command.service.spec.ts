@@ -41,8 +41,12 @@ function fixture(issuedAt = now) {
         findPersonalByOwnerPersonId:
             vi.fn<SpaceRepository['findPersonalByOwnerPersonId']>(),
         findById: vi.fn<SpaceRepository['findById']>().mockResolvedValue(space),
+        findByInvitationTokenHash:
+            vi.fn<SpaceRepository['findByInvitationTokenHash']>(),
         createShared: vi.fn<SpaceRepository['createShared']>(),
         saveInvitationChange: vi.fn<SpaceRepository['saveInvitationChange']>(),
+        saveInvitationResponse:
+            vi.fn<SpaceRepository['saveInvitationResponse']>(),
     };
 
     const receipts = {
@@ -51,12 +55,17 @@ function fixture(issuedAt = now) {
     };
 
     const readQueries = {
+        findInvitationPreview:
+            vi.fn<SpaceReadQueries['findInvitationPreview']>(),
+        findInvitationResponseResult:
+            vi.fn<SpaceReadQueries['findInvitationResponseResult']>(),
         listAccessible: vi.fn<SpaceReadQueries['listAccessible']>(),
         findDetails: vi.fn<SpaceReadQueries['findDetails']>(),
         findInvitationResult: vi.fn<SpaceReadQueries['findInvitationResult']>(),
     };
 
     const tokens = {
+        hash: vi.fn<InvitationTokenGenerator['hash']>(),
         generate: vi
             .fn<InvitationTokenGenerator['generate']>()
             .mockReturnValue({
