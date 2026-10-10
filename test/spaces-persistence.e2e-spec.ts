@@ -36,6 +36,8 @@ import { ReplaceSpaceInvitationHandler } from '../dist/modules/spaces/applicatio
 import { ListAccessibleSpacesQuery } from '../dist/modules/spaces/application/queries/list-accessible-spaces.query.js';
 import { GetSpaceDetailsQuery } from '../dist/modules/spaces/application/queries/get-space-details.query.js';
 import { TypeOrmSpaceReadQueries } from '../dist/modules/spaces/infrastructure/typeorm/queries/typeorm-space-read-queries.js';
+import { TypeOrmSpaceAccessQueries } from '../dist/modules/spaces/infrastructure/typeorm/queries/typeorm-space-access-queries.js';
+import { SpaceAccessService } from '../dist/modules/spaces/application/services/space-access.service.js';
 
 const now = new Date('2026-09-28T12:00:00.000Z');
 
@@ -126,6 +128,9 @@ describe('CARD-002 — persistência PostgreSQL', () => {
         receipts = new TypeOrmSpaceCommandReceipts(managerProvider);
         uow = new TypeOrmUnitOfWork(db, context);
         reads = new TypeOrmSpaceReadQueries(managerProvider);
+        const access = new SpaceAccessService(
+            new TypeOrmSpaceAccessQueries(managerProvider),
+        );
 
         const commands = new SpaceInvitationCommandService(
             uow,
@@ -134,13 +139,14 @@ describe('CARD-002 — persistência PostgreSQL', () => {
             tokens,
             reads,
             new ConfigService({ WEB_ORIGIN: 'https://app.example.com' }),
+            access,
         );
 
         createSpace = new CreateSharedSpaceHandler(commands);
         issueInvitation = new IssueSpaceInvitationHandler(commands);
         replaceInvitation = new ReplaceSpaceInvitationHandler(commands);
         listSpaces = new ListAccessibleSpacesQuery(reads);
-        getDetails = new GetSpaceDetailsQuery(reads);
+        getDetails = new GetSpaceDetailsQuery(reads, access);
 
         const personal = await repository.findPersonalByOwnerPersonId(
             PersonId.from(personId),

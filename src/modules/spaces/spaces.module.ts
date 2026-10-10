@@ -30,6 +30,10 @@ import { InvitationsController } from './http/controllers/invitations.controller
 import { GetInvitationPreviewQuery } from './application/queries/get-invitation-preview.query.js';
 import { RespondToSharedSpaceInvitationHandler } from './application/handlers/respond-to-shared-space-invitation.handler.js';
 import { TypeOrmSpaceReadQueries } from './infrastructure/typeorm/queries/typeorm-space-read-queries.js';
+import { SPACE_ACCESS_PORT } from './application/ports/public/space-access.port.js';
+import { SPACE_ACCESS_QUERIES } from './application/ports/private/space-access-queries.js';
+import { SpaceAccessService } from './application/services/space-access.service.js';
+import { TypeOrmSpaceAccessQueries } from './infrastructure/typeorm/queries/typeorm-space-access-queries.js';
 @Module({
     imports: [
         DatabaseModule,
@@ -52,6 +56,8 @@ import { TypeOrmSpaceReadQueries } from './infrastructure/typeorm/queries/typeor
         NodeInvitationTokenGenerator,
         TypeOrmSpaceCommandReceipts,
         TypeOrmSpaceReadQueries,
+        TypeOrmSpaceAccessQueries,
+        SpaceAccessService,
         SpaceInvitationCommandService,
         CreateSharedSpaceHandler,
         IssueSpaceInvitationHandler,
@@ -61,6 +67,14 @@ import { TypeOrmSpaceReadQueries } from './infrastructure/typeorm/queries/typeor
         GetInvitationPreviewQuery,
         RespondToSharedSpaceInvitationHandler,
 
+        {
+            provide: SPACE_ACCESS_PORT,
+            useExisting: SpaceAccessService,
+        },
+        {
+            provide: SPACE_ACCESS_QUERIES,
+            useExisting: TypeOrmSpaceAccessQueries,
+        },
         {
             provide: SPACE_READ_QUERIES,
             useExisting: TypeOrmSpaceReadQueries,
@@ -91,6 +105,10 @@ import { TypeOrmSpaceReadQueries } from './infrastructure/typeorm/queries/typeor
         },
     ],
 
-    exports: [PROVISION_PERSONAL_CONTEXT, GET_PERSONAL_CONTEXT],
+    exports: [
+        PROVISION_PERSONAL_CONTEXT,
+        GET_PERSONAL_CONTEXT,
+        SPACE_ACCESS_PORT,
+    ],
 })
 export class SpacesModule {}

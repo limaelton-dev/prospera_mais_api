@@ -21,6 +21,7 @@ import type {
 import type { SpaceReadQueries } from '../ports/private/space-read-queries.js';
 import type { SpaceRepository } from '../ports/private/space.repository.js';
 import { SpaceInvitationCommandService } from './space-invitation-command.service.js';
+import type { SpaceAccessPort } from '../ports/public/space-access.port.js';
 
 const now = new Date('2026-09-28T12:00:00.000Z');
 
@@ -79,6 +80,10 @@ function fixture(issuedAt = now) {
     };
 
     const transaction = vi.spyOn(uow, 'execute');
+    const access = {
+        assertCanRead: vi.fn<SpaceAccessPort['assertCanRead']>(),
+        assertCanWrite: vi.fn<SpaceAccessPort['assertCanWrite']>(),
+    };
 
     const service = new SpaceInvitationCommandService(
         uow,
@@ -87,6 +92,7 @@ function fixture(issuedAt = now) {
         tokens,
         readQueries,
         new ConfigService({ WEB_ORIGIN: 'https://app.example.com' }),
+        access,
     );
 
     const command: Extract<SpaceCommand, { operation: 'REPLACE_INVITATION' }> =
@@ -134,6 +140,7 @@ function fixture(issuedAt = now) {
         readQueries,
         tokens,
         transaction,
+        access,
         service,
         command,
         receipt,
@@ -168,6 +175,7 @@ describe('SpaceInvitationCommandService', () => {
         expect(result.replayed).toBe(false);
         expect(result).not.toHaveProperty('tokenHash');
         expect(f.repository.createShared).toHaveBeenCalledTimes(1);
+        expect(f.access.assertCanWrite).not.toHaveBeenCalled();
         expect(f.receipts.save).toHaveBeenCalledWith(
             expect.anything(),
             expect.objectContaining({
@@ -213,6 +221,10 @@ describe('SpaceInvitationCommandService', () => {
         expect(f.space.invitations[0].status).toBe('EXPIRED');
         expect(result.invitation.expiresAt).toBe('2026-10-01T12:00:00.000Z');
         expect(f.repository.saveInvitationChange).toHaveBeenCalledTimes(1);
+        expect(f.access.assertCanWrite).toHaveBeenCalledWith(
+            f.actorId,
+            f.space.id,
+        );
     });
 
     it('substitui pela raiz e grava o recibo do novo convite', async () => {
@@ -250,6 +262,7 @@ describe('SpaceInvitationCommandService', () => {
         expect(f.tokens.generate).not.toHaveBeenCalled();
         expect(f.repository.saveInvitationChange).not.toHaveBeenCalled();
         expect(f.receipts.save).not.toHaveBeenCalled();
+        expect(f.access.assertCanWrite).not.toHaveBeenCalled();
     });
 
     it.each(['missing', 'outsider', 'member'] as const)(
@@ -368,5 +381,39 @@ describe('SpaceInvitationCommandService', () => {
         expect(f.transaction).toHaveBeenCalledTimes(1);
         expect(f.repository.saveInvitationChange).toHaveBeenCalledTimes(1);
         expect(f.receipts.save).not.toHaveBeenCalled();
+    });
+
+    it('nega novo efeito pela porta dentro da transação antes de gerar segredo ou persistir', async () => {
+        const f = fixture();
+        let inTransaction = false;
+        f.transaction.mockImplementation(async (work) => {
+            inTransaction = true;
+            try {
+                return await work();
+            } finally {
+                inTransaction = false;
+            }
+        });
+        f.access.assertCanWrite.mockImplementation(async () => {
+            expect(inTransaction).toBe(true);
+            throw new SpacesDomainError('SPACE_NOT_ACTIVE');
+        });
+        await expect(f.service.execute(f.command)).rejects.toMatchObject({
+            code: 'SPACE_NOT_ACTIVE',
+        });
+        expect(f.tokens.generate).not.toHaveBeenCalled();
+        expect(f.repository.saveInvitationChange).not.toHaveBeenCalled();
+        expect(f.receipts.save).not.toHaveBeenCalled();
+    });
+
+    it('mantém CAS antes da checagem de escrita', async () => {
+        const f = fixture();
+        f.access.assertCanWrite.mockRejectedValue(
+            new SpacesDomainError('SPACE_NOT_ACTIVE'),
+        );
+        await expect(
+            f.service.execute({ ...f.command, expectedVersion: 99 }),
+        ).rejects.toBeInstanceOf(ConcurrentModificationError);
+        expect(f.access.assertCanWrite).not.toHaveBeenCalled();
     });
 });

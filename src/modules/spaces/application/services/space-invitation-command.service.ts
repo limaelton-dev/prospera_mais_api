@@ -33,6 +33,10 @@ import {
     SPACE_REPOSITORY,
     type SpaceRepository,
 } from '../ports/private/space.repository.js';
+import {
+    SPACE_ACCESS_PORT,
+    type SpaceAccessPort,
+} from '../ports/public/space-access.port.js';
 
 @Injectable()
 export class SpaceInvitationCommandService {
@@ -53,6 +57,8 @@ export class SpaceInvitationCommandService {
         private readonly readQueries: SpaceReadQueries,
 
         private readonly configService: ConfigService,
+        @Inject(SPACE_ACCESS_PORT)
+        private readonly access: SpaceAccessPort,
     ) {}
 
     async execute(
@@ -123,6 +129,8 @@ export class SpaceInvitationCommandService {
             if (existing.version !== command.expectedVersion) {
                 throw new ConcurrentModificationError();
             }
+
+            await this.access.assertCanWrite(command.actorId, command.spaceId);
 
             space = existing;
 
