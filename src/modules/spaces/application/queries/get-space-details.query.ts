@@ -7,18 +7,25 @@ import {
     SPACE_READ_QUERIES,
     type SpaceReadQueries,
 } from '../ports/private/space-read-queries.js';
+import {
+    SPACE_ACCESS_PORT,
+    type SpaceAccessPort,
+} from '../ports/public/space-access.port.js';
 
 @Injectable()
 export class GetSpaceDetailsQuery {
     constructor(
         @Inject(SPACE_READ_QUERIES)
         private readonly readQueries: SpaceReadQueries,
+        @Inject(SPACE_ACCESS_PORT)
+        private readonly access: SpaceAccessPort,
     ) {}
 
     async execute(
         actorId: PersonId,
         spaceId: SpaceId,
     ): Promise<SpaceDetailsView> {
+        await this.access.assertCanRead(actorId, spaceId);
         const details = await this.readQueries.findDetails(
             actorId,
             spaceId,
