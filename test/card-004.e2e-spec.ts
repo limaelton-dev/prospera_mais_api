@@ -75,7 +75,7 @@ describe('CARD-004 — acesso e isolamento HTTP/PostgreSQL', () => {
             throw new Error('Expected the isolated test database');
         access = app.get(AccessConsumer).access;
         await db.query(
-            'TRUNCATE TABLE space_command_receipts, space_invitations, space_members, auth_sessions, auth_credentials, spaces, persons',
+            'TRUNCATE TABLE space_command_receipts, space_invitations, space_members, auth_sessions, auth_credentials, spaces, persons CASCADE',
         );
     });
 

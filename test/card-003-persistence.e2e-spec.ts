@@ -130,6 +130,7 @@ describe('CARD-003 — persistência e migration', () => {
             const applied = await db.runMigrations();
             expect(applied.map((item) => item.name)).toEqual([
                 'Card003InvitationResponses1791585518092',
+                'ConfigureDefaultSettlementRule1791590400000',
             ]);
             expect(await receipts.find(command)).not.toBeNull();
             expect((await repository.findById(legacy.space.id))?.version).toBe(
@@ -151,7 +152,7 @@ describe('CARD-003 — persistência e migration', () => {
     beforeEach(async () => {
         await db.query(`
             TRUNCATE TABLE space_command_receipts, space_invitations,
-                space_members, auth_sessions, auth_credentials, spaces, persons
+                space_members, auth_sessions, auth_credentials, spaces, persons CASCADE
         `);
         vi.useFakeTimers({ toFake: ['Date'] });
         vi.setSystemTime(now);

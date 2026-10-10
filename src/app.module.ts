@@ -1,3 +1,5 @@
+import { FinancesModule } from './modules/finances/finances.module.js';
+import { mapFinancesError } from './modules/finances/http/filters/finances-error.mapper.js';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './shared/technical/database/database.module.js';
@@ -19,13 +21,18 @@ import { mapSpacesError } from './modules/spaces/http/filters/spaces-error.mappe
         DatabaseModule,
         SpacesModule,
         IdentityModule,
+        FinancesModule,
     ],
     controllers: [],
     providers: [
         {
             provide: APP_FILTER,
             useFactory: () =>
-                new ApiExceptionFilter([mapIdentityError, mapSpacesError]),
+                new ApiExceptionFilter([
+                    mapIdentityError,
+                    mapSpacesError,
+                    mapFinancesError,
+                ]),
         },
     ],
 })
