@@ -68,7 +68,7 @@ describe('CARD-003 — contrato HTTP com PostgreSQL', () => {
         }
         await db.query(`
             TRUNCATE TABLE space_command_receipts, space_invitations, space_members,
-                auth_sessions, auth_credentials, spaces, persons
+                auth_sessions, auth_credentials, spaces, persons CASCADE
         `);
     });
 
@@ -964,8 +964,8 @@ describe('CARD-003 — contrato HTTP com PostgreSQL', () => {
             .get('/v2/openapi.json')
             .expect(200);
         const document = response.body;
-        expect(document.info.version).toBe('0.3.0');
-        expect(Object.keys(document.paths)).toHaveLength(11);
+        expect(document.info.version).toBe('0.4.0');
+        expect(Object.keys(document.paths)).toHaveLength(12);
         for (const endpoint of endpoints) {
             const operation =
                 document.paths['/v2/invitations/' + endpoint].post;

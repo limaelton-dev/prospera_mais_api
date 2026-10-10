@@ -1,3 +1,4 @@
+import { financesOpenApi } from '../../modules/finances/http/openapi/finances.openapi.js';
 import type { OpenAPIObject } from '@nestjs/swagger';
 
 import { createAuthOpenApiDocument } from '../../modules/identity/http/openapi/auth.openapi.js';
@@ -12,13 +13,18 @@ export function createApiOpenApiDocument(isProduction: boolean): OpenAPIObject {
         info: {
             ...auth.info,
             title: 'Prospera Mais API',
-            version: '0.3.0',
+            version: '0.4.0',
         },
-        tags: [...(auth.tags ?? []), ...(spacesOpenApi.tags ?? [])],
+        tags: [
+            ...(auth.tags ?? []),
+            ...(spacesOpenApi.tags ?? []),
+            ...(financesOpenApi.tags ?? []),
+        ],
         paths: {
             ...auth.paths,
             ...spacesOpenApi.paths,
             ...invitationsOpenApi.paths,
+            ...financesOpenApi.paths,
         },
         components: {
             ...auth.components,
@@ -26,6 +32,7 @@ export function createApiOpenApiDocument(isProduction: boolean): OpenAPIObject {
                 ...auth.components?.schemas,
                 ...spacesOpenApi.components?.schemas,
                 ...invitationsOpenApi.components?.schemas,
+                ...financesOpenApi.components?.schemas,
             },
             parameters: {
                 ...auth.components?.parameters,

@@ -119,6 +119,7 @@ describe('CARD-002 — persistência PostgreSQL', () => {
         expect(applied.map((migration) => migration.name)).toEqual([
             expect.stringMatching(/^Card002SharedSpaces\d+$/),
             expect.stringMatching(/^Card003InvitationResponses\d+$/),
+            'ConfigureDefaultSettlementRule1791590400000',
         ]);
 
         const context = new TransactionContext();
@@ -167,7 +168,7 @@ describe('CARD-002 — persistência PostgreSQL', () => {
                 auth_sessions,
                 auth_credentials,
                 spaces,
-                persons
+                persons CASCADE
         `);
     });
 
